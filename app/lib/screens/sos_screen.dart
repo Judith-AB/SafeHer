@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../services/firestore_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SosScreen extends StatefulWidget {
   const SosScreen({super.key});
@@ -43,22 +44,18 @@ class _SosScreenState extends State<SosScreen>
     setState(() => _isSending = true);
 
     try {
-      // Get location
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) throw Exception('Location services disabled');
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
+      // Save to Firestore
       final position = await Geolocator.getCurrentPosition();
-
-      // Save SOS to Firestore
       await _firestoreService.saveSosEvent(
         latitude: position.latitude,
         longitude: position.longitude,
       );
+
+      // Call 112 directly
+      final Uri callUri = Uri(scheme: 'tel', path: '112');
+      if (await canLaunchUrl(callUri)) {
+        await launchUrl(callUri);
+      }
 
       setState(() {
         _sosSent = true;
