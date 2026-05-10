@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:safeher/theme.dart';
 import '../services/firestore_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -17,6 +18,8 @@ class _SosScreenState extends State<SosScreen>
   bool _sosSent = false;
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
+
+  static const Color emergencyCrimson = Color(0xFFB22222);
 
   @override
   void initState() {
@@ -51,7 +54,6 @@ class _SosScreenState extends State<SosScreen>
         longitude: position.longitude,
       );
 
-      // Call 112 directly
       final Uri callUri = Uri(scheme: 'tel', path: '112');
       if (await canLaunchUrl(callUri)) {
         await launchUrl(callUri);
@@ -74,15 +76,16 @@ class _SosScreenState extends State<SosScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:
-          _sosSent ? Colors.green.shade50 : const Color(0xFFFFF0F5),
+      backgroundColor: AppTheme.white,
+
       appBar: AppBar(
-        backgroundColor: Colors.red,
+        backgroundColor: AppTheme.deepCharcoal,
+        centerTitle: true,
         title: const Text(
           '🚨 SOS Emergency',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: AppTheme.creamLight, fontWeight: FontWeight.bold),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: AppTheme.creamLight),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -90,49 +93,47 @@ class _SosScreenState extends State<SosScreen>
           children: [
             const SizedBox(height: 20),
 
-            // Status message
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                color: AppTheme.beigeMid,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red.shade200),
+                border: Border.all(color: AppTheme.oliveMuted.withOpacity(0.5)),
               ),
               child: const Column(
                 children: [
                   Text(
-                    '⚡ Emergency Helplines',
+                    'Emergency Helplines',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      color: Colors.red,
+                      color: AppTheme.deepCharcoal,
                     ),
                   ),
                   SizedBox(height: 8),
-                  Text('🚨 All Emergencies: 112'),
-                  Text('👩 Women Helpline: 1091'),
-                  Text('👮 Police: 100'),
-                  Text('🏠 Domestic Violence: 181'),
+                  Text('🚨 All Emergencies: 112', style: TextStyle(color: AppTheme.deepCharcoal)),
+                  Text('👩 Women Helpline: 1091', style: TextStyle(color: AppTheme.deepCharcoal)),
+                  Text('👮 Police: 100', style: TextStyle(color: AppTheme.deepCharcoal)),
+                  Text('🏠 Domestic Violence: 181', style: TextStyle(color: AppTheme.deepCharcoal)),
                 ],
               ),
             ),
 
             const Spacer(),
 
-            // SOS Button
             _sosSent
                 ? Column(
                     children: [
                       const Icon(Icons.check_circle,
-                          color: Colors.green, size: 80),
+                          color: AppTheme.oliveMuted, size: 80),
                       const SizedBox(height: 16),
                       const Text(
                         '✅ SOS Alert Sent!',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
-                          color: Colors.green,
+                          color: AppTheme.oliveMuted,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -145,7 +146,7 @@ class _SosScreenState extends State<SosScreen>
                       ElevatedButton(
                         onPressed: () => setState(() => _sosSent = false),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
+                          backgroundColor: emergencyCrimson,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 32, vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -154,7 +155,7 @@ class _SosScreenState extends State<SosScreen>
                         ),
                         child: const Text(
                           'Send Again',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(color: AppTheme.creamLight),
                         ),
                       ),
                     ],
@@ -168,10 +169,10 @@ class _SosScreenState extends State<SosScreen>
                         height: 200,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.red,
+                          color: emergencyCrimson,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.red.withOpacity(0.5),
+                              color: emergencyCrimson.withOpacity(0.4),
                               blurRadius: 30,
                               spreadRadius: 10,
                             ),
@@ -180,7 +181,7 @@ class _SosScreenState extends State<SosScreen>
                         child: _isSending
                             ? const Center(
                                 child: CircularProgressIndicator(
-                                  color: Colors.white,
+                                  color: AppTheme.creamLight,
                                   strokeWidth: 3,
                                 ),
                               )
@@ -188,13 +189,13 @@ class _SosScreenState extends State<SosScreen>
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(Icons.warning_rounded,
-                                      color: Colors.white, size: 50),
+                                      color: AppTheme.creamLight, size: 50),
                                   SizedBox(height: 8),
                                   Text(
                                     'HOLD\nfor SOS',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: AppTheme.creamLight,
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
                                     ),

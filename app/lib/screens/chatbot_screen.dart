@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:safeher/theme.dart';
 import '../services/dialogflow_service.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/typing_indicator.dart';
@@ -20,7 +21,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   bool _ready = false;
   String? _error;
 
-  // (label shown on chip, text sent to Dialogflow)
   static const _chips = [
     ('🆘 Helplines',       'show helplines'),
     ('📋 File FIR',        'how to file FIR'),
@@ -111,15 +111,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     super.dispose();
   }
 
-  // ─── build ───────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F0F5),
+      backgroundColor: AppTheme.creamLight,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFE91E8C),
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.deepCharcoal,
+        iconTheme: const IconThemeData(color: AppTheme.creamLight),
         elevation: 0,
         titleSpacing: 0,
         title: Row(
@@ -127,28 +125,28 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             Container(
               margin: const EdgeInsets.only(right: 10),
               padding: const EdgeInsets.all(6),
-              decoration: const BoxDecoration(
-                color: Colors.white24,
+              decoration: BoxDecoration(
+                color: AppTheme.creamLight.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.balance, size: 18),
+              child: const Icon(Icons.balance, size: 18, color: AppTheme.creamLight),
             ),
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Legal Aid Assistant',
                     style: TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w600)),
+                        fontSize: 15, fontWeight: FontWeight.w600, color: AppTheme.creamLight)),
                 Text('SafeHer • Free legal guidance',
                     style:
-                        TextStyle(fontSize: 11, color: Colors.white70)),
+                        TextStyle(fontSize: 11, color: AppTheme.beigeMid)),
               ],
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.phone_in_talk_outlined),
+            icon: const Icon(Icons.phone_in_talk_outlined, color: AppTheme.creamLight),
             tooltip: 'Emergency helplines',
             onPressed: () => _send('show helplines'),
           ),
@@ -184,7 +182,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   Widget _chipRow() => Container(
         height: 48,
-        color: Colors.white,
+        color: AppTheme.creamLight,
         child: ListView(
           scrollDirection: Axis.horizontal,
           padding:
@@ -194,10 +192,10 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                     padding: const EdgeInsets.only(right: 8),
                     child: ActionChip(
                       label: Text(c.$1,
-                          style: const TextStyle(fontSize: 12)),
-                      backgroundColor: const Color(0xFFFCE4F0),
+                          style: const TextStyle(fontSize: 12, color: AppTheme.deepCharcoal)),
+                      backgroundColor: AppTheme.beigeMid,
                       side: BorderSide(
-                          color: const Color(0xFFE91E8C).withOpacity(0.3)),
+                          color: AppTheme.oliveMuted.withOpacity(0.5)),
                       padding: const EdgeInsets.symmetric(horizontal: 4),
                       onPressed: () => _send(c.$2),
                     ),
@@ -218,7 +216,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       );
 
   Widget _inputBar() => Container(
-        color: Colors.white,
+        color: AppTheme.white,
         padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
         child: SafeArea(
           top: false,
@@ -232,13 +230,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                   maxLines: 4,
                   textCapitalization: TextCapitalization.sentences,
                   enabled: _ready,
+                  style: const TextStyle(color: AppTheme.deepCharcoal),
                   decoration: InputDecoration(
                     hintText: _ready
                         ? 'Ask a legal question...'
                         : 'Connecting…',
-                    hintStyle: TextStyle(color: Colors.grey.shade400),
+                    hintStyle: TextStyle(color: AppTheme.deepCharcoal.withOpacity(0.4)),
                     filled: true,
-                    fillColor: const Color(0xFFF9F0F5),
+                    // Subtly themed fill
+                    fillColor: AppTheme.creamLight,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),
                       borderSide: BorderSide.none,
@@ -259,11 +259,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                     width: 44,
                     height: 44,
                     decoration: const BoxDecoration(
-                      color: Color(0xFFE91E8C),
+                      color: AppTheme.deepCharcoal,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.send_rounded,
-                        color: Colors.white, size: 20),
+                        color: AppTheme.creamLight, size: 20),
                   ),
                 ),
               ),
