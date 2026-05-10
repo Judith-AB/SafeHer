@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:safeher/theme.dart';
 
 class ChatMessage {
   final String text;
@@ -16,11 +17,12 @@ class ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isBot = message.isBot;
-    final bubbleColor =
-        isBot ? Colors.white : const Color(0xFFE91E8C);
-    final textColor = isBot ? const Color(0xFF1F1F1F) : Colors.white;
-    final timeColor =
-        isBot ? Colors.grey.shade400 : Colors.white.withOpacity(0.65);
+    
+    final bubbleColor = isBot ? AppTheme.white : AppTheme.deepCharcoal;
+    final textColor = isBot ? AppTheme.deepCharcoal : AppTheme.creamLight;
+    final timeColor = isBot 
+        ? AppTheme.deepCharcoal.withOpacity(0.5) 
+        : AppTheme.creamLight.withOpacity(0.65);
 
     return Align(
       alignment: isBot ? Alignment.centerLeft : Alignment.centerRight,
@@ -39,7 +41,7 @@ class ChatBubble extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.07),
+              color: AppTheme.deepCharcoal.withOpacity(0.07),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -49,28 +51,26 @@ class ChatBubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Bot label row
             if (isBot)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 4),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.balance,
-                        size: 11, color: Color(0xFFE91E8C)),
-                    const SizedBox(width: 4),
-                    const Text(
+                    Icon(Icons.balance,
+                        size: 11, color: AppTheme.oliveMuted),
+                    SizedBox(width: 4),
+                    Text(
                       'Legal Assistant',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFFE91E8C),
+                        color: AppTheme.oliveMuted,
                       ),
                     ),
                   ],
                 ),
               ),
-            // Message text
             Text(
               message.text,
               style: TextStyle(
@@ -79,7 +79,6 @@ class ChatBubble extends StatelessWidget {
                 color: textColor,
               ),
             ),
-            // Timestamp
             const SizedBox(height: 4),
             Align(
               alignment: Alignment.centerRight,

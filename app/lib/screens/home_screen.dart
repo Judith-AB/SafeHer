@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:safeher/theme.dart';
 import 'sos_screen.dart';
 import 'report_screen.dart';
 import 'heatmap_screen.dart';
@@ -11,13 +12,14 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF0F5),
+      backgroundColor: AppTheme.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFE91E8C),
+        backgroundColor: AppTheme.deepCharcoal,
+        elevation: 0,
         title: const Text(
           '🛡️ SafeHer',
           style: TextStyle(
-            color: Colors.white,
+            color: AppTheme.creamLight,
             fontWeight: FontWeight.bold,
             fontSize: 22,
           ),
@@ -30,11 +32,11 @@ class HomeScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Hello, stay safe 💗',
+              'Hello, stay safe',
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFFE91E8C),
+                color: AppTheme.deepCharcoal,
               ),
             ),
             const SizedBox(height: 8),
@@ -44,7 +46,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 30),
 
-            // SOS Button
+            // SOS Button - Keeping it Red for safety
             GestureDetector(
               onTap: () => Navigator.push(
                 context,
@@ -54,11 +56,11 @@ class HomeScreen extends StatelessWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.red,
+                  color: const Color(0xFFB22222), 
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.red.withOpacity(0.4),
+                      color: const Color(0xFFB22222).withOpacity(0.3),
                       blurRadius: 15,
                       offset: const Offset(0, 5),
                     )
@@ -68,12 +70,12 @@ class HomeScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.warning_rounded,
-                        color: Colors.white, size: 32),
+                        color: AppTheme.creamLight, size: 32),
                     SizedBox(width: 12),
                     Text(
                       'SOS — I Need Help Now',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppTheme.creamLight,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -85,7 +87,7 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Feature Grid
+            // Feature Grid - All boxes now use oliveMuted
             Expanded(
               child: GridView.count(
                 crossAxisCount: 2,
@@ -93,63 +95,50 @@ class HomeScreen extends StatelessWidget {
                 mainAxisSpacing: 16,
                 children: [
 
-                  // REPORT INCIDENT
                   _FeatureCard(
                     icon: Icons.report_problem,
                     label: 'Report Incident',
-                    color: const Color(0xFFFF6B6B),
+                    color: AppTheme.beigeMid,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const ReportScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const ReportScreen()),
                     ),
                   ),
 
-                  // HEATMAP
                   _FeatureCard(
                     icon: Icons.map,
                     label: 'Safety Heatmap',
-                    color: const Color(0xFF4ECDC4),
+                    color: AppTheme.beigeMid,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const HeatmapScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const HeatmapScreen()),
                     ),
                   ),
 
-                  // CHATBOT
                   _FeatureCard(
                     icon: Icons.chat,
                     label: 'Legal Aid Chatbot',
-                    color: const Color(0xFF9B59B6),
+                    color: AppTheme.beigeMid,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const ChatbotScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const ChatbotScreen()),
                     ),
                   ),
 
-                  // HELPLINES
                   _FeatureCard(
                     icon: Icons.info,
                     label: 'Helpline Numbers',
-                    color: const Color(0xFF3498DB),
+                    color: AppTheme.beigeMid,
                     onTap: () => _showHelplines(context),
                   ),
 
-                  // ANALYTICS
                   _FeatureCard(
                     icon: Icons.analytics,
                     label: 'Analytics Dashboard',
-                    color: const Color(0xFFFF9800),
+                    color: AppTheme.beigeMid,
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => const AnalyticsScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const AnalyticsScreen()),
                     ),
                   ),
                 ],
@@ -165,26 +154,30 @@ class HomeScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('📞 Emergency Helplines'),
+        backgroundColor: AppTheme.white,
+        title: const Text(
+          'Emergency Helplines',
+          style: TextStyle(color: AppTheme.deepCharcoal, fontWeight: FontWeight.bold),
+        ),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('🚨 Emergency: 112'),
+            Text('🚨 Emergency: 112', style: TextStyle(color: AppTheme.deepCharcoal)),
             SizedBox(height: 8),
-            Text('👩 Women Helpline: 1091'),
+            Text('👩 Women Helpline: 1091', style: TextStyle(color: AppTheme.deepCharcoal)),
             SizedBox(height: 8),
-            Text('🏠 Domestic Violence: 181'),
+            Text('🏠 Domestic Violence: 181', style: TextStyle(color: AppTheme.deepCharcoal)),
             SizedBox(height: 8),
-            Text('👶 CHILDLINE: 1098'),
+            Text('👶 CHILDLINE: 1098', style: TextStyle(color: AppTheme.deepCharcoal)),
             SizedBox(height: 8),
-            Text('👮 Police: 100'),
+            Text('👮 Police: 100', style: TextStyle(color: AppTheme.deepCharcoal)),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text('Close', style: TextStyle(color: AppTheme.deepCharcoal)),
           )
         ],
       ),
@@ -215,7 +208,7 @@ class _FeatureCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.3),
+              color: color.withOpacity(0.2),
               blurRadius: 10,
               offset: const Offset(0, 4),
             )
@@ -224,13 +217,13 @@ class _FeatureCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 40),
+            Icon(icon, color: AppTheme.deepCharcoal, size: 40),
             const SizedBox(height: 12),
             Text(
               label,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppTheme.deepCharcoal,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),

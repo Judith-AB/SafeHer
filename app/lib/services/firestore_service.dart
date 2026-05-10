@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class FirestoreService {
   final _db = FirebaseFirestore.instance;
 
-  // Submit anonymous incident report
   Future<void> submitIncident({
     required double latitude,
     required double longitude,
@@ -20,12 +19,10 @@ class FirestoreService {
     });
   }
 
-  // Get all heatmap buckets for map display
   Stream<QuerySnapshot> getHeatmapBuckets() {
     return _db.collection('heatmap_buckets').snapshots();
   }
 
-  // Get recent incidents
   Stream<QuerySnapshot> getIncidents() {
     return _db
         .collection('incidents')
@@ -34,7 +31,6 @@ class FirestoreService {
         .snapshots();
   }
 
-  // Save SOS event
   Future<void> saveSosEvent({
     required double latitude,
     required double longitude,

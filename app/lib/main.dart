@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:safeher/theme.dart';
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
-import 'screens/heatmap_screen.dart';  
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,12 +20,7 @@ class SafeHerApp extends StatelessWidget {
     return MaterialApp(
       title: 'SafeHer',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFE91E8C),
-        ),
-        useMaterial3: true,
-      ),
+      theme: AppTheme.theme,
       home: const HomeScreen(),
     );
   }

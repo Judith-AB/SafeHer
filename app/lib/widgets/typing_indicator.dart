@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:safeher/theme.dart';
 
 class TypingIndicator extends StatefulWidget {
   const TypingIndicator({super.key});
@@ -51,11 +52,11 @@ class _TypingIndicatorState extends State<TypingIndicator>
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppTheme.white,
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: AppTheme.deepCharcoal.withOpacity(0.06),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -74,7 +75,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE91E8C).withOpacity(0.45),
+                    color: AppTheme.oliveMuted.withOpacity(0.6),
                     shape: BoxShape.circle,
                   ),
                 ),
