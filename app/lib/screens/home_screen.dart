@@ -3,6 +3,7 @@ import 'sos_screen.dart';
 import 'report_screen.dart';
 import 'heatmap_screen.dart';
 import 'chatbot_screen.dart';
+import 'analytics_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -45,8 +46,10 @@ class HomeScreen extends StatelessWidget {
 
             // SOS Button
             GestureDetector(
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const SosScreen())),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SosScreen()),
+              ),
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
@@ -64,7 +67,8 @@ class HomeScreen extends StatelessWidget {
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.warning_rounded, color: Colors.white, size: 32),
+                    Icon(Icons.warning_rounded,
+                        color: Colors.white, size: 32),
                     SizedBox(width: 12),
                     Text(
                       'SOS — I Need Help Now',
@@ -81,39 +85,72 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Grid of 3 feature buttons
+            // Feature Grid
             Expanded(
               child: GridView.count(
                 crossAxisCount: 2,
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
                 children: [
+
+                  // REPORT INCIDENT
                   _FeatureCard(
                     icon: Icons.report_problem,
                     label: 'Report Incident',
                     color: const Color(0xFFFF6B6B),
-                    onTap: () => Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const ReportScreen())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ReportScreen(),
+                      ),
+                    ),
                   ),
+
+                  // HEATMAP
                   _FeatureCard(
                     icon: Icons.map,
                     label: 'Safety Heatmap',
                     color: const Color(0xFF4ECDC4),
-                    onTap: () => Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const HeatmapScreen())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const HeatmapScreen(),
+                      ),
+                    ),
                   ),
+
+                  // CHATBOT
                   _FeatureCard(
                     icon: Icons.chat,
                     label: 'Legal Aid Chatbot',
                     color: const Color(0xFF9B59B6),
-                    onTap: () => Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const ChatbotScreen())),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ChatbotScreen(),
+                      ),
+                    ),
                   ),
+
+                  // HELPLINES
                   _FeatureCard(
                     icon: Icons.info,
                     label: 'Helpline Numbers',
                     color: const Color(0xFF3498DB),
                     onTap: () => _showHelplines(context),
+                  ),
+
+                  // ANALYTICS
+                  _FeatureCard(
+                    icon: Icons.analytics,
+                    label: 'Analytics Dashboard',
+                    color: const Color(0xFFFF9800),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AnalyticsScreen(),
+                      ),
+                    ),
                   ),
                 ],
               ),
