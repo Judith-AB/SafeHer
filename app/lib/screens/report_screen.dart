@@ -139,13 +139,18 @@ class _ReportScreenState extends State<ReportScreen> {
 
       String areaName = placemarks.first.locality ?? "Unknown";
 
+      double fuzzedLat = (position.latitude * 1000).round() / 1000;
+      double fuzzedLng = (position.longitude * 1000).round() / 1000;
+
       await FirebaseFirestore.instance.collection('incidents').add({
-        'latitude': position.latitude,
-        'longitude': position.longitude,
+        'latitude': fuzzedLat,
+        'longitude': fuzzedLng,
         'type': _selectedType,
         'description': _descController.text.trim(),
         'areaName': areaName,
         'timestamp': FieldValue.serverTimestamp(),
+        'pii_removed': true,
+        'grid_resolution_m': 111,
       });
 
       await updateAnalytics(position);
