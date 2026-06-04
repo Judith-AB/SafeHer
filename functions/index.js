@@ -52,11 +52,6 @@ exports.onSosTriggered = onDocumentCreated("sos_events/{sosId}", async (event) =
     });
 });
 
-// ══════════════════════════════════════════════
-// NOVELTY 2: Legal escalation function
-// When chatbot can't answer, query is logged
-// anonymously for human legal aid volunteer
-// ══════════════════════════════════════════════
 const { onCall } = require("firebase-functions/v2/https");
 
 exports.escalateLegalQuery = onCall(async (request) => {

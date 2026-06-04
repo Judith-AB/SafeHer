@@ -3,6 +3,7 @@ import 'package:safeher/theme.dart';
 import '../services/dialogflow_service.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/typing_indicator.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
@@ -20,6 +21,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   bool _typing = false;
   bool _ready = false;
   String? _error;
+  final String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
 
   static const _chips = [
     ('🆘 Helplines',       'show helplines'),
@@ -80,6 +82,18 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (!mounted) return;
       setState(() => _typing = false);
       _addBot(reply);
+
+      final bool isFallback =
+          reply.toLowerCase().contains("i didn't understand") ||
+          reply.toLowerCase().contains("i'm not sure") ||
+          reply.toLowerCase().contains("could you rephrase") ||
+          reply.toLowerCase().contains("sorry, i don't") ||
+          reply.toLowerCase().contains("i couldn't find");
+
+      if (isFallback) {
+        await _escalateQuery(text);
+      }
+
     } catch (_) {
       if (!mounted) return;
       setState(() => _typing = false);
@@ -101,6 +115,27 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         );
       }
     });
+  }
+
+  Future<void> _escalateQuery(String userQuery) async {
+    try {
+      await FirebaseFunctions.instance
+          .httpsCallable('escalateLegalQuery')
+          .call({
+        'userQuery': userQuery,
+        'sessionId': _sessionId,
+      });
+      _addBot(
+        'I\'ve forwarded your question to a legal aid volunteer. '
+        'They typically respond within 24 hours.\n\n'
+        'For urgent help right now:\n'
+        '📞 iCall: 9152987821\n'
+        '👩 Mahila Helpline: 181\n'
+        '🚔 Police: 100',
+      );
+    } catch (e) {
+      debugPrint('Escalation failed: $e');
+    }
   }
 
   @override
