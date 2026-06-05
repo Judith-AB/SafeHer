@@ -145,9 +145,9 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF0F5),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFE91E8C),
+        backgroundColor: const Color.fromARGB(255, 80,75,56),
         title: const Text(
-          '🗺️ ML Safety Heatmap',
+          ' ML Safety Heatmap',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
