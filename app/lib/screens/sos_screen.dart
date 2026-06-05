@@ -82,7 +82,7 @@ class _SosScreenState extends State<SosScreen>
         backgroundColor: AppTheme.deepCharcoal,
         centerTitle: true,
         title: const Text(
-          '🚨 SOS Emergency',
+          'SOS Emergency',
           style: TextStyle(color: AppTheme.creamLight, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: AppTheme.creamLight),
@@ -129,7 +129,7 @@ class _SosScreenState extends State<SosScreen>
                           color: AppTheme.oliveMuted, size: 80),
                       const SizedBox(height: 16),
                       const Text(
-                        '✅ SOS Alert Sent!',
+                        'SOS Alert Sent!',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,

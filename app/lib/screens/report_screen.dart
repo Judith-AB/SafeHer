@@ -162,7 +162,7 @@ class _ReportScreenState extends State<ReportScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Report submitted anonymously!'),
+            content: Text('Report submitted anonymously!'),
             backgroundColor: AppTheme.oliveMuted,
           ),
         );
@@ -189,7 +189,7 @@ class _ReportScreenState extends State<ReportScreen> {
         centerTitle: true,
         iconTheme: const IconThemeData(color: AppTheme.creamLight),
         title: const Text(
-          '📍 Report Incident',
+          'Report Incident',
           style: TextStyle(
             color: AppTheme.creamLight,
             fontWeight: FontWeight.bold,
