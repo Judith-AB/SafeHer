@@ -1,5 +1,6 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onRequest, onCall } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { BigQuery } = require("@google-cloud/bigquery");
 const admin = require("firebase-admin");
 
@@ -125,4 +126,79 @@ exports.getPredictiveHeatmap = onRequest(async (req, res) => {
     predictions,
     roc_auc: metrics.roc_auc,
   });
+});
+exports.weeklyRetrainRiskModel = onSchedule({
+    schedule: "every sunday 00:00",
+    timeoutSeconds: 540,
+    memory: "1GiB",
+}, async () => {
+    try {
+        console.log("Starting weekly model retraining...");
+
+        const retrainQuery = `
+            CREATE OR REPLACE MODEL \`safeher-app-9251b.safeher.risk_model\`
+            OPTIONS (
+                model_type = 'boosted_tree_classifier',
+                num_parallel_tree = 1,
+                max_tree_depth = 4,
+                input_label_cols = ['risk_label']
+            ) AS
+            SELECT
+                category,
+                hour_of_day,
+                day_of_week,
+                ROUND(lat, 2) AS lat_zone,
+                ROUND(lng, 2) AS lng_zone,
+                CASE
+                    WHEN risk_score >= 0.6 THEN 'HIGH'
+                    ELSE 'LOW'
+                END AS risk_label
+            FROM \`safeher-app-9251b.safeher.incidents_ml\`
+            WHERE split = 'TRAIN'
+        `;
+
+        const evalQuery = `
+            SELECT
+                ROUND(precision, 4) AS precision,
+                ROUND(recall, 4) AS recall,
+                ROUND(accuracy, 4) AS accuracy,
+                ROUND(f1_score, 4) AS f1_score,
+                ROUND(roc_auc, 4) AS roc_auc
+            FROM ML.EVALUATE(
+                MODEL \`safeher-app-9251b.safeher.risk_model\`,
+                (
+                    SELECT
+                        category,
+                        hour_of_day,
+                        day_of_week,
+                        ROUND(lat, 2) AS lat_zone,
+                        ROUND(lng, 2) AS lng_zone,
+                        CASE
+                            WHEN risk_score >= 0.6 THEN 'HIGH'
+                            ELSE 'LOW'
+                        END AS risk_label
+                    FROM \`safeher-app-9251b.safeher.incidents_ml\`
+                    WHERE split = 'TEST'
+                )
+            )
+        `;
+
+        await bigquery.query(retrainQuery);
+        const [evalRows] = await bigquery.query(evalQuery);
+        const metrics = evalRows[0];
+
+        await db.collection("model_metrics").doc("risk_model").set({
+            roc_auc: metrics.roc_auc,
+            accuracy: metrics.accuracy,
+            precision: metrics.precision,
+            recall: metrics.recall,
+            f1_score: metrics.f1_score,
+            last_trained: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        console.log("Weekly retraining complete:", metrics);
+
+    } catch (error) {
+        console.error("Weekly retraining failed:", error);
+    }
 });
