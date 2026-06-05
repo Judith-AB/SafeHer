@@ -4,6 +4,8 @@ import '../services/dialogflow_service.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/typing_indicator.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
@@ -82,13 +84,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       if (!mounted) return;
       setState(() => _typing = false);
       _addBot(reply);
+      debugPrint('===REPLY===: $reply'); 
 
       final bool isFallback =
+          reply.toLowerCase().contains("i don't know what you mean") ||
+          reply.toLowerCase().contains("i couldn't find") ||
           reply.toLowerCase().contains("i didn't understand") ||
           reply.toLowerCase().contains("i'm not sure") ||
           reply.toLowerCase().contains("could you rephrase") ||
-          reply.toLowerCase().contains("sorry, i don't") ||
-          reply.toLowerCase().contains("i couldn't find");
+          reply.toLowerCase().contains("sorry, i don't");
 
       if (isFallback) {
         await _escalateQuery(text);
@@ -119,12 +123,15 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   Future<void> _escalateQuery(String userQuery) async {
     try {
-      await FirebaseFunctions.instance
-          .httpsCallable('escalateLegalQuery')
-          .call({
-        'userQuery': userQuery,
-        'sessionId': _sessionId,
-      });
+      await http.post(
+        Uri.parse('https://escalatelegalquery-b36yjypjaa-uc.a.run.app'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userQuery': userQuery,
+          'sessionId': _sessionId,
+          'userContact': '+919876543210',
+        }),
+      );
       _addBot(
         'I\'ve forwarded your question to a legal aid volunteer. '
         'They typically respond within 24 hours.\n\n'

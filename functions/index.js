@@ -65,8 +65,9 @@ exports.onSosTriggered = onDocumentCreated("sos_events/{sosId}", async (event) =
   });
 });
 
-exports.escalateLegalQuery = onCall(async (request) => {
-  const { userQuery, sessionId } = request.data;
+
+exports.escalateLegalQuery = onRequest({ cors: true }, async (req, res) => {
+  const { userQuery, sessionId } = req.body;
 
   await db.collection("unresolved_legal_queries").add({
     query: userQuery,
