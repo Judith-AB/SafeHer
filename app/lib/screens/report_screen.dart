@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:safeher/theme.dart';
 import '../services/firestore_service.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -142,7 +143,10 @@ class _ReportScreenState extends State<ReportScreen> {
       double fuzzedLat = (position.latitude * 1000).round() / 1000;
       double fuzzedLng = (position.longitude * 1000).round() / 1000;
 
+      final currentUser = FirebaseAuth.instance.currentUser;
+
       await FirebaseFirestore.instance.collection('incidents').add({
+        'anonymous_uid': currentUser?.uid,
         'latitude': fuzzedLat,
         'longitude': fuzzedLng,
         'type': _selectedType,
