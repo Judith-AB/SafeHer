@@ -77,10 +77,10 @@ exports.escalateLegalQuery = onRequest({ cors: true }, async (req, res) => {
     escalation_tier: "human_legal_aid",
   });
 
-  return {
+  res.json({
     escalated: true,
     message: "Your query has been forwarded to a legal aid volunteer. You may also call iCall: 9152987821",
-  };
+  });
 });
 
 exports.getPredictiveHeatmap = onRequest(async (req, res) => {
