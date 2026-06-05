@@ -123,3 +123,4 @@ app/lib/firebase_options.dart
 google-services.json
 app/android/app/google-services.json
 GoogleService-Info.plist
+app/assets/dialog_flow_auth.json
