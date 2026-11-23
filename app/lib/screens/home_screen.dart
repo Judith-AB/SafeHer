@@ -17,7 +17,7 @@ class HomeScreen extends StatelessWidget {
         backgroundColor: AppTheme.deepCharcoal,
         elevation: 0,
         title: const Text(
-          '🛡️ SafeHer',
+          'SafeHer',
           style: TextStyle(
             color: AppTheme.creamLight,
             fontWeight: FontWeight.bold,
@@ -46,7 +46,6 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 30),
 
-            // SOS Button - Keeping it Red for safety
             GestureDetector(
               onTap: () => Navigator.push(
                 context,
@@ -87,7 +86,6 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Feature Grid - All boxes now use oliveMuted
             Expanded(
               child: GridView.count(
                 crossAxisCount: 2,
@@ -163,15 +161,15 @@ class HomeScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('🚨 Emergency: 112', style: TextStyle(color: AppTheme.deepCharcoal)),
+            Text('Emergency: 112', style: TextStyle(color: AppTheme.deepCharcoal)),
             SizedBox(height: 8),
-            Text('👩 Women Helpline: 1091', style: TextStyle(color: AppTheme.deepCharcoal)),
+            Text('Women Helpline: 1091', style: TextStyle(color: AppTheme.deepCharcoal)),
             SizedBox(height: 8),
-            Text('🏠 Domestic Violence: 181', style: TextStyle(color: AppTheme.deepCharcoal)),
+            Text('Domestic Violence: 181', style: TextStyle(color: AppTheme.deepCharcoal)),
             SizedBox(height: 8),
-            Text('👶 CHILDLINE: 1098', style: TextStyle(color: AppTheme.deepCharcoal)),
+            Text('CHILDLINE: 1098', style: TextStyle(color: AppTheme.deepCharcoal)),
             SizedBox(height: 8),
-            Text('👮 Police: 100', style: TextStyle(color: AppTheme.deepCharcoal)),
+            Text('Police: 100', style: TextStyle(color: AppTheme.deepCharcoal)),
           ],
         ),
         actions: [

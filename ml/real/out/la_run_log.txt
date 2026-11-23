@@ -1,0 +1,23 @@
+sample TIME OCC values: ['00:01', '18:00', '00:01', '12:00', '16:30']
+female-victim incidents kept: 118555
+| category               |   count |
+|:-----------------------|--------:|
+| Assault                |   49955 |
+| Intimate partner       |   42192 |
+| Sexual offence         |   15708 |
+| Harassment and threats |   10157 |
+| Stalking               |     543 |
+|   band |   by 6-hour band |
+|-------:|-----------------:|
+|      0 |            19282 |
+|      1 |            24590 |
+|      2 |            36733 |
+|      3 |            37950 |
+cells 4387, train rows 100901, test rows 52644, HIGH share test 0.062
+| model                     |   roc_auc |   pr_auc |   hit_rate_top5pct |   PAI |
+|:--------------------------|----------:|---------:|-------------------:|------:|
+| Last month's count        |     0.893 |    0.433 |              0.255 |  5.09 |
+| 12-month historical count |     0.928 |    0.556 |              0.297 |  5.94 |
+| Logistic regression       |     0.931 |    0.568 |              0.298 |  5.96 |
+| Decision tree (depth 4)   |     0.924 |    0.525 |              0.295 |  5.91 |
+| Boosted tree              |     0.931 |    0.564 |              0.296 |  5.93 |

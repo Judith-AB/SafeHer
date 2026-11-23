@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:safeher/theme.dart';
+import '../constants.dart';
 
 class AnalyticsScreen extends StatelessWidget {
   const AnalyticsScreen({super.key});
@@ -34,22 +35,29 @@ class AnalyticsScreen extends StatelessWidget {
             );
           }
 
-          var data = snapshot.data!.data() as Map<String, dynamic>;
+          final data = (snapshot.data!.data() as Map<String, dynamic>?) ?? {};
+          final byType = Map<String, dynamic>.from(data['by_type'] ?? {});
+          final byArea = Map<String, dynamic>.from(data['by_area'] ?? {});
+          final byBand = Map<String, dynamic>.from(data['by_hour_band'] ?? {});
 
-          int total = data['totalIncidents'] ?? 0;
-          int harassment = data['harassment'] ?? 0;
-          int theft = data['theft'] ?? 0;
-          int stalking = data['stalking'] ?? 0;
-          int assault = data['assault'] ?? 0;
-          int other = data['other'] ?? 0;
-
-          String area = "Unknown";
-          if (data['mostUnsafeArea'] != null &&
-              data['mostUnsafeArea'].toString().trim().isNotEmpty) {
-            area = data['mostUnsafeArea'];
+          int count(String k) => (byType[k] as num?)?.toInt() ?? 0;
+          String topKey(Map<String, dynamic> m) {
+            if (m.isEmpty) return 'Unknown';
+            return m.entries
+                .reduce((a, b) => (a.value as num) >= (b.value as num) ? a : b)
+                .key;
           }
 
-          String peakHours = data['peakUnsafeHours'] ?? "Unknown";
+          const bandLabels = {
+            '00-06': '12 AM - 6 AM',
+            '06-12': '6 AM - 12 PM',
+            '12-18': '12 PM - 6 PM',
+            '18-24': '6 PM - 12 AM',
+          };
+
+          int total = (data['totalIncidents'] as num?)?.toInt() ?? 0;
+          String area = topKey(byArea);
+          String peakHours = bandLabels[topKey(byBand)] ?? 'Unknown';
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -65,7 +73,7 @@ class AnalyticsScreen extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 _buildCard(
-                  title: "Most Unsafe Area",
+                  title: "Most reports from",
                   value: area,
                   color: AppTheme.oliveMuted,
                   icon: Icons.location_on,
@@ -87,88 +95,15 @@ class AnalyticsScreen extends StatelessWidget {
 
                 const SizedBox(height: 16),
 
-                _buildProgressTile(
-                  label: "Harassment",
-                  value: harassment,
-                  color: AppTheme.oliveMuted,
-                ),
-
-                const SizedBox(height: 12),
-
-                _buildProgressTile(
-                  label: "Theft",
-                  value: theft,
-                  color: AppTheme.oliveMuted,
-                ),
-
-                const SizedBox(height: 12),
-
-                _buildProgressTile(
-                  label: "Stalking",
-                  value: stalking,
-                  color: AppTheme.oliveMuted,
-                ),
-
-                const SizedBox(height: 12),
-
-                _buildProgressTile(
-                  label: "Assault",
-                  value: assault,
-                  color: AppTheme.oliveMuted,
-                ),
-
-                const SizedBox(height: 12),
-
-                _buildProgressTile(
-                  label: "Other",
-                  value: other,
-                  color: AppTheme.oliveMuted,
-                ),
-
-                const SizedBox(height: 30),
-
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppTheme.white,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.deepCharcoal.withOpacity(0.1),
-                        blurRadius: 8,
-                      )
-                    ],
+                for (final c in AppConstants.categories) ...[
+                  _buildProgressTile(
+                    label: c,
+                    value: count(c),
+                    total: total,
+                    color: AppTheme.oliveMuted,
                   ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Incident Trend",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.deepCharcoal,
-                        ),
-                      ),
-                      SizedBox(height: 20),
-                      Text(
-                        "Incidents are increasing in the last 7 days.",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: AppTheme.deepCharcoal,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      LinearProgressIndicator(
-                        value: 0.7,
-                        minHeight: 10,
-                        backgroundColor: AppTheme.beigeMid,
-                        color: AppTheme.deepCharcoal,
-                      ),
-                    ],
-                  ),
-                ),
+                  const SizedBox(height: 12),
+                ],
 
                 const SizedBox(height: 30),
 
@@ -271,12 +206,10 @@ class AnalyticsScreen extends StatelessWidget {
   Widget _buildProgressTile({
     required String label,
     required int value,
+    required int total,
     required Color color,
   }) {
-    double progress = value / 10;
-    if (progress > 1) {
-      progress = 1;
-    }
+    final double progress = total == 0 ? 0 : value / total;
 
     return Container(
       padding: const EdgeInsets.all(16),

@@ -46,30 +46,37 @@ class _SosScreenState extends State<SosScreen>
   Future<void> _sendSOS() async {
     setState(() => _isSending = true);
 
+    // Call 112 first so nothing below can delay the call.
+    final Uri callUri = Uri(scheme: 'tel', path: '112');
     try {
-      // Save to Firestore
-      final position = await Geolocator.getCurrentPosition();
-      await _firestoreService.saveSosEvent(
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
-
-      final Uri callUri = Uri(scheme: 'tel', path: '112');
       if (await canLaunchUrl(callUri)) {
         await launchUrl(callUri);
       }
+    } catch (_) {}
 
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        final position = await Geolocator.getCurrentPosition()
+            .timeout(const Duration(seconds: 10));
+        await _firestoreService.saveSosEvent(
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
+      }
+    } catch (_) {
+      // Recording the event is optional; the call has already been placed.
+    }
+
+    if (mounted) {
       setState(() {
         _sosSent = true;
         _isSending = false;
       });
-    } catch (e) {
-      setState(() => _isSending = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
     }
   }
 
@@ -112,10 +119,10 @@ class _SosScreenState extends State<SosScreen>
                     ),
                   ),
                   SizedBox(height: 8),
-                  Text('🚨 All Emergencies: 112', style: TextStyle(color: AppTheme.deepCharcoal)),
-                  Text('👩 Women Helpline: 1091', style: TextStyle(color: AppTheme.deepCharcoal)),
-                  Text('👮 Police: 100', style: TextStyle(color: AppTheme.deepCharcoal)),
-                  Text('🏠 Domestic Violence: 181', style: TextStyle(color: AppTheme.deepCharcoal)),
+                  Text('All Emergencies: 112', style: TextStyle(color: AppTheme.deepCharcoal)),
+                  Text('Women Helpline: 1091', style: TextStyle(color: AppTheme.deepCharcoal)),
+                  Text('Police: 100', style: TextStyle(color: AppTheme.deepCharcoal)),
+                  Text('Domestic Violence: 181', style: TextStyle(color: AppTheme.deepCharcoal)),
                 ],
               ),
             ),

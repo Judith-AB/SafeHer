@@ -124,3 +124,19 @@ google-services.json
 app/android/app/google-services.json
 GoogleService-Info.plist
 app/assets/dialog_flow_auth.json
+
+# Never commit: keys, raw data, environments, generated files
+*service-account*.json
+*-key.json
+/data/
+/safeHer/
+.venv/
+venv/
+pyvenv.cfg
+node_modules/
+__pycache__/
+*.zip
+!dialogflow/agent_camera_ready.zip
+scripts/chatbot_eval_raw.json
+.vscode/
+.idea/

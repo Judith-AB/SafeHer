@@ -1,0 +1,12 @@
+{
+  "name": "safeher-rules-test",
+  "private": true,
+  "scripts": {
+    "test": "cd .. && npx --prefix rules-test firebase emulators:exec --only firestore --project demo-safeher \"node --test rules-test/rules.test.js\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.0.0",
+    "firebase-tools": "^15.0.0"
+  }
+}

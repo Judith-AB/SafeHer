@@ -1,18 +1,55 @@
-rules_version='2'
+rules_version = '2';
 
+// Clients can only create reports. Cloud Functions use the Admin SDK and bypass these rules.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 6, 6);
+
+    function signedIn() { return request.auth != null; }
+
+    // at most 3 decimal places, i.e. a ~111 m grid
+    function isRounded(x) {
+      return x is number && math.abs(x * 1000 - math.round(x * 1000)) < 0.000001;
     }
+    function inIndia(lat, lng) {
+      return lat >= 6 && lat <= 37.5 && lng >= 68 && lng <= 97.5;
+    }
+    function validCategory(t) {
+      return t in ['Assault', 'Stalking', 'Eve Teasing', 'Harassment', 'Unsafe Area'];
+    }
+
+    match /incidents/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(
+             ['latitude', 'longitude', 'type', 'description', 'areaName',
+              'timestamp', 'anonymous', 'pii_removed', 'grid_resolution_m'])
+        && request.resource.data.keys().hasAll(['latitude', 'longitude', 'type', 'timestamp'])
+        && isRounded(request.resource.data.latitude)
+        && isRounded(request.resource.data.longitude)
+        && inIndia(request.resource.data.latitude, request.resource.data.longitude)
+        && validCategory(request.resource.data.type)
+        && request.resource.data.timestamp == request.time
+        && (!('description' in request.resource.data)
+            || (request.resource.data.description is string && request.resource.data.description.size() <= 280))
+        && (!('areaName' in request.resource.data)
+            || (request.resource.data.areaName is string && request.resource.data.areaName.size() <= 60));
+      allow read, update, delete: if false;
+    }
+
+    match /sos_events/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['latitude', 'longitude', 'timestamp'])
+        && isRounded(request.resource.data.latitude)
+        && isRounded(request.resource.data.longitude)
+        && request.resource.data.timestamp == request.time;
+      allow read, update, delete: if false;
+    }
+
+    // written only by Cloud Functions; heatmap_buckets stays server-only because a
+    // bucket with one report would expose that report's cell, type and time
+    match /analytics/{id}       { allow read: if true; allow write: if false; }
+    match /model_metrics/{id}   { allow read: if true; allow write: if false; }
+
+    // everything else is server-only
+    match /{document=**} { allow read, write: if false; }
   }
 }

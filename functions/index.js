@@ -1,204 +1,266 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
-const { onRequest, onCall } = require("firebase-functions/v2/https");
+const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { logger } = require("firebase-functions");
 const { BigQuery } = require("@google-cloud/bigquery");
+const { SessionsClient } = require("@google-cloud/dialogflow");
 const admin = require("firebase-admin");
+const { roundCoord, istParts, truncateToIstHour, hourBand, inIndia } = require("./lib/helpers");
 
 admin.initializeApp();
 const db = admin.firestore();
 const bigquery = new BigQuery();
+const FieldValue = admin.firestore.FieldValue;
 
-function fuzzCoordinates(lat, lng) {
-  return {
-    lat: Math.round(lat * 1000) / 1000,
-    lng: Math.round(lng * 1000) / 1000,
-  };
+const PROJECT = process.env.GCLOUD_PROJECT || "safeher-app-9251b";
+const DATASET = `${PROJECT}.safeher`;
+const PANEL_TABLE = `${DATASET}.ncrb_panel`;
+const FORECAST_TABLE = `${DATASET}.kerala_forecast`;
+const DEFAULT_MODEL = `${DATASET}.ncrb_risk_model_v1`;
+// total_lag1 is a raw count that drifts between years; it is kept only for a baseline.
+const NON_FEATURES = "state, district, year, split, is_kerala, total_lag1";
+const DIALOGFLOW_PROJECT = process.env.DIALOGFLOW_PROJECT || PROJECT;
+
+// Must match app/lib/constants.dart and firestore.rules.
+const CATEGORIES = ["Assault", "Stalking", "Eve Teasing", "Harassment", "Unsafe Area"];
+const RETENTION_DAYS = { incident: 365, sos: 30, legal: 90 };
+const FALLBACK_CONFIDENCE = 0.5;
+const GATE = { aucTolerance: 0.01, recallTolerance: 0.02 };
+const KEEP_MODELS = 4;
+
+const daysFromNow = (n) => admin.firestore.Timestamp.fromMillis(Date.now() + n * 86400000);
+
+function requireAuth(request) {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign-in required.");
+}
+
+async function currentModel() {
+  const doc = await db.collection("model_metrics").doc("current").get();
+  return doc.exists ? doc.data() : { model: DEFAULT_MODEL };
 }
 
 exports.onIncidentCreated = onDocumentCreated("incidents/{incidentId}", async (event) => {
-  const data = event.data.data();
-  const fuzzed = fuzzCoordinates(data.latitude, data.longitude);
-  const bucketId = `${fuzzed.lat}_${fuzzed.lng}`;
+  const snap = event.data;
+  if (!snap) return;
+  const data = snap.data();
+  const id = event.params.incidentId;
+  if (data.processed) return; // Firestore triggers can fire more than once
 
-  await event.data.ref.update({
-    latitude: fuzzed.lat,
-    longitude: fuzzed.lng,
+  const lat = roundCoord(Number(data.latitude));
+  const lng = roundCoord(Number(data.longitude));
+  if (!inIndia(lat, lng) || !CATEGORIES.includes(data.type)) {
+    logger.warn("Rejected invalid incident", { id }); // never log coordinates
+    await snap.ref.delete();
+    return;
+  }
+
+  const reported = data.timestamp && data.timestamp.toDate ? data.timestamp.toDate() : new Date(event.time);
+  const { hour, day } = istParts(reported);
+  const reportedHour = truncateToIstHour(reported);
+  const area = typeof data.areaName === "string" ? data.areaName.slice(0, 60) : null;
+
+  await snap.ref.update({
+    latitude: lat,
+    longitude: lng,
+    timestamp: admin.firestore.Timestamp.fromDate(reportedHour),
+    expireAt: daysFromNow(RETENTION_DAYS.incident),
+    anonymous_uid: FieldValue.delete(), // written by older app builds
     pii_removed: true,
     grid_resolution_m: 111,
+    processed: true,
   });
 
-  const incidentType = (data.type || "Other").toLowerCase().replace(" ", "_");
+  await db.collection("heatmap_buckets").doc(`${lat}_${lng}`).set({
+    lat, lng,
+    count: FieldValue.increment(1),
+    by_type: { [data.type]: FieldValue.increment(1) },
+    lastUpdated: FieldValue.serverTimestamp(),
+  }, { merge: true });
 
-  await db.collection("heatmap_buckets")
-    .doc(bucketId)
-    .set({
-      lat: fuzzed.lat,
-      lng: fuzzed.lng,
-      count: admin.firestore.FieldValue.increment(1),
-      dominant_type: incidentType,
-      lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
-    }, { merge: true });
+  const summary = {
+    totalIncidents: FieldValue.increment(1),
+    by_type: { [data.type]: FieldValue.increment(1) },
+    by_hour_band: { [hourBand(hour)]: FieldValue.increment(1) },
+  };
+  if (area) summary.by_area = { [area]: FieldValue.increment(1) };
+  await db.collection("analytics").doc("summary").set(summary, { merge: true });
 
-  const now = new Date();
-  const rows = [{
-    lat: fuzzed.lat,
-    lng: fuzzed.lng,
-    category: data.type || "Other",
-    hour_of_day: now.getHours(),
-    day_of_week: now.getDay(),
-    risk_score: 0.5,
-    split: "TEST",
-  }];
-
-  await bigquery.dataset("safeher").table("incidents_ml").insert(rows);
-  console.log(`Incident inserted into BigQuery: ${bucketId}`);
+  // Live reports have no ground-truth label, so they are stored but not used for training.
+  try {
+    await bigquery.dataset("safeher").table("incidents_live").insert([{
+      insertId: event.id,
+      json: {
+        incident_id: id, lat, lng, category: data.type,
+        hour_of_day: hour, day_of_week: day,
+        reported_hour: reportedHour.toISOString(),
+      },
+    }], { raw: true });
+  } catch (err) {
+    logger.error("BigQuery insert failed", { id, err: err.message });
+    throw err;
+  }
 });
 
 exports.onSosTriggered = onDocumentCreated("sos_events/{sosId}", async (event) => {
-  const data = event.data.data();
-  console.log(`SOS triggered at: ${data.latitude}, ${data.longitude}`);
-
-  await db.collection("sos_log").add({
-    latitude: data.latitude,
-    longitude: data.longitude,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    status: "triggered",
-  });
+  if (!event.data) return;
+  await event.data.ref.update({ expireAt: daysFromNow(RETENTION_DAYS.sos) });
+  logger.info("SOS event recorded", { id: event.params.sosId });
 });
 
+const dialogflow = new SessionsClient();
 
-exports.escalateLegalQuery = onRequest({ cors: true }, async (req, res) => {
-  const { userQuery, sessionId } = req.body;
+exports.detectLegalIntent = onCall({ maxInstances: 10 }, async (request) => {
+  requireAuth(request);
+  const text = String(request.data?.text || "").trim();
+  const sessionId = String(request.data?.sessionId || "");
+  if (!text || text.length > 500) throw new HttpsError("invalid-argument", "Message must be 1-500 characters.");
+  if (!/^[A-Za-z0-9_-]{8,64}$/.test(sessionId)) throw new HttpsError("invalid-argument", "Bad session id.");
+
+  const [response] = await dialogflow.detectIntent({
+    session: dialogflow.projectAgentSessionPath(DIALOGFLOW_PROJECT, sessionId),
+    queryInput: { text: { text, languageCode: "en" } },
+  });
+  const q = response.queryResult || {};
+  const confidence = typeof q.intentDetectionConfidence === "number" ? q.intentDetectionConfidence : 0;
+  const isFallback = Boolean(q.intent && q.intent.isFallback);
+  return {
+    reply: q.fulfillmentText || "",
+    intent: q.intent ? q.intent.displayName : null,
+    confidence,
+    isFallback,
+    referral: isFallback || confidence < FALLBACK_CONFIDENCE,
+  };
+});
+
+exports.escalateLegalQuery = onCall({ maxInstances: 5 }, async (request) => {
+  requireAuth(request);
+  const query = String(request.data?.userQuery || "").trim();
+  if (!query || query.length > 1000) throw new HttpsError("invalid-argument", "Query must be 1-1000 characters.");
 
   await db.collection("unresolved_legal_queries").add({
-    query: userQuery,
-    sessionId: sessionId,
-    timestamp: admin.firestore.FieldValue.serverTimestamp(),
-    resolved: false,
-    escalation_tier: "human_legal_aid",
+    query,
+    created: FieldValue.serverTimestamp(),
+    expireAt: daysFromNow(RETENTION_DAYS.legal),
+    status: "open",
+    escalation_tier: "referral",
   });
 
-  res.json({
-    escalated: true,
-    message: "Your query has been forwarded to a legal aid volunteer. You may also call iCall: 9152987821",
-  });
+  return {
+    referred: true,
+    message:
+      "I can't answer this one reliably. Your question has been saved (without your identity) " +
+      "so we can improve these answers, but no one will reply to it here.",
+  };
 });
 
-exports.getPredictiveHeatmap = onRequest(async (req, res) => {
+exports.getPredictiveHeatmap = onRequest({ maxInstances: 5, timeoutSeconds: 60 }, async (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
+  if (req.method !== "GET") {
+    res.status(405).json({ error: "GET only" });
+    return;
+  }
+  try {
+    const current = await currentModel();
+    const cacheRef = db.collection("heatmap_cache").doc("current");
+    const cache = await cacheRef.get();
+    const fresh = cache.exists && cache.data().model === current.model &&
+      Date.now() - cache.data().generated_at.toMillis() < 6 * 3600 * 1000;
 
-  const predictQuery = `
-        SELECT
-            lat_zone,
-            lng_zone,
-            predicted_risk_label,
-            ROUND(
-                (SELECT p.prob
-                 FROM UNNEST(predicted_risk_label_probs) p
-                 WHERE p.label = 'HIGH'), 3
-            ) AS high_risk_probability
-        FROM ML.PREDICT(
-            MODEL \`safeher-app-9251b.safeher.risk_model\`,
-            (
-                SELECT DISTINCT
-                    category,
-                    hour_of_day,
-                    day_of_week,
-                    ROUND(lat, 2) AS lat_zone,
-                    ROUND(lng, 2) AS lng_zone
-                FROM \`safeher-app-9251b.safeher.incidents_ml\`
-                WHERE split = 'TEST'
-                LIMIT 150
-            )
-        )
-    `;
-
-  // Fetch predictions + AUC from Firestore in parallel
-  const [predictionsResult, metricsDoc] = await Promise.all([
-    bigquery.query(predictQuery),
-    db.collection("model_metrics").doc("risk_model").get(),
-  ]);
-
-  const predictions = predictionsResult[0];
-  const metrics = metricsDoc.data();
-
-  res.json({
-    predictions,
-    roc_auc: metrics.roc_auc,
-  });
-});
-exports.weeklyRetrainRiskModel = onSchedule({
-    schedule: "every sunday 00:00",
-    timeoutSeconds: 540,
-    memory: "1GiB",
-}, async () => {
-    try {
-        console.log("Starting weekly model retraining...");
-
-        const retrainQuery = `
-            CREATE OR REPLACE MODEL \`safeher-app-9251b.safeher.risk_model\`
-            OPTIONS (
-                model_type = 'boosted_tree_classifier',
-                num_parallel_tree = 1,
-                max_tree_depth = 4,
-                input_label_cols = ['risk_label']
-            ) AS
-            SELECT
-                category,
-                hour_of_day,
-                day_of_week,
-                ROUND(lat, 2) AS lat_zone,
-                ROUND(lng, 2) AS lng_zone,
-                CASE
-                    WHEN risk_score >= 0.6 THEN 'HIGH'
-                    ELSE 'LOW'
-                END AS risk_label
-            FROM \`safeher-app-9251b.safeher.incidents_ml\`
-            WHERE split = 'TRAIN'
-        `;
-
-        const evalQuery = `
-            SELECT
-                ROUND(precision, 4) AS precision,
-                ROUND(recall, 4) AS recall,
-                ROUND(accuracy, 4) AS accuracy,
-                ROUND(f1_score, 4) AS f1_score,
-                ROUND(roc_auc, 4) AS roc_auc
-            FROM ML.EVALUATE(
-                MODEL \`safeher-app-9251b.safeher.risk_model\`,
-                (
-                    SELECT
-                        category,
-                        hour_of_day,
-                        day_of_week,
-                        ROUND(lat, 2) AS lat_zone,
-                        ROUND(lng, 2) AS lng_zone,
-                        CASE
-                            WHEN risk_score >= 0.6 THEN 'HIGH'
-                            ELSE 'LOW'
-                        END AS risk_label
-                    FROM \`safeher-app-9251b.safeher.incidents_ml\`
-                    WHERE split = 'TEST'
-                )
-            )
-        `;
-
-        await bigquery.query(retrainQuery);
-        const [evalRows] = await bigquery.query(evalQuery);
-        const metrics = evalRows[0];
-
-        await db.collection("model_metrics").doc("risk_model").set({
-            roc_auc: metrics.roc_auc,
-            accuracy: metrics.accuracy,
-            precision: metrics.precision,
-            recall: metrics.recall,
-            f1_score: metrics.f1_score,
-            last_trained: admin.firestore.FieldValue.serverTimestamp(),
-        });
-
-        console.log("Weekly retraining complete:", metrics);
-
-    } catch (error) {
-        console.error("Weekly retraining failed:", error);
+    let predictions;
+    if (fresh) {
+      predictions = cache.data().predictions;
+    } else {
+      // Probability that each Kerala district ranks in India's top 20% next year.
+      const query = `
+        SELECT district, lat AS lat_zone, lng AS lng_zone, year AS forecast_year,
+               predicted_risk_label,
+               ROUND((SELECT p.prob FROM UNNEST(predicted_risk_label_probs) p WHERE p.label = 'HIGH'), 3)
+                 AS high_risk_probability
+        FROM ML.PREDICT(MODEL \`${current.model}\`, (SELECT * FROM \`${FORECAST_TABLE}\`))
+        ORDER BY district`;
+      const [rows] = await bigquery.query({ query });
+      predictions = rows;
+      await cacheRef.set({
+        model: current.model,
+        generated_at: admin.firestore.Timestamp.now(),
+        predictions,
+      });
     }
+    res.set("Cache-Control", "public, max-age=300");
+    res.json({ predictions, roc_auc: current.roc_auc ?? null, model: current.model });
+  } catch (err) {
+    logger.error("Heatmap failed", { err: err.message });
+    res.status(503).json({ error: "Predictions unavailable" });
+  }
 });
+
+function trainSql(model) {
+  return `
+    CREATE OR REPLACE MODEL \`${model}\`
+    OPTIONS (model_type = 'boosted_tree_classifier', num_parallel_tree = 1, max_tree_depth = 4,
+             input_label_cols = ['risk_label'], data_split_method = 'NO_SPLIT') AS
+    SELECT * EXCEPT (${NON_FEATURES})
+    FROM \`${PANEL_TABLE}\` WHERE split = 'TRAIN'`;
+}
+
+function evalSql(model) {
+  return `
+    SELECT ROUND(precision, 4) AS precision, ROUND(recall, 4) AS recall, ROUND(accuracy, 4) AS accuracy,
+           ROUND(f1_score, 4) AS f1_score, ROUND(roc_auc, 4) AS roc_auc
+    FROM ML.EVALUATE(MODEL \`${model}\`, (
+      SELECT * EXCEPT (${NON_FEATURES}) FROM \`${PANEL_TABLE}\` WHERE split = 'TEST'))`;
+}
+
+exports.scheduledRetrainRiskModel = onSchedule({
+  schedule: "1 of month 00:00", // NCRB data is annual, so monthly is enough
+  timeZone: "UTC",
+  timeoutSeconds: 540,
+  memory: "1GiB",
+}, async () => {
+  const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const candidate = `${DATASET}.ncrb_risk_model_${stamp}`;
+  const current = await currentModel();
+
+  try {
+    await bigquery.query({ query: trainSql(candidate) });
+    const [[cand]] = await bigquery.query({ query: evalSql(candidate) });
+    let cur = null;
+    if (current.roc_auc != null) cur = current;
+    else if (current.model) [[cur]] = await bigquery.query({ query: evalSql(current.model) }).catch(() => [[null]]);
+
+    const promote = !cur || (
+      cand.roc_auc >= cur.roc_auc - GATE.aucTolerance &&
+      cand.recall >= cur.recall - GATE.recallTolerance);
+
+    await db.collection("model_history").add({
+      candidate, previous: current.model, candidate_metrics: cand,
+      previous_metrics: cur, promoted: promote, gate: GATE,
+      at: FieldValue.serverTimestamp(),
+    });
+
+    if (promote) {
+      const record = { model: candidate, ...cand, promoted_at: FieldValue.serverTimestamp() };
+      await db.collection("model_metrics").doc("current").set(record);
+      await db.collection("model_metrics").doc("risk_model").set(record); // read by older app builds
+      await db.collection("heatmap_cache").doc("current").delete();
+      logger.info("Promoted candidate", { candidate, cand });
+      await pruneOldModels(candidate);
+    } else {
+      await bigquery.query({ query: `DROP MODEL IF EXISTS \`${candidate}\`` });
+      logger.warn("Candidate rejected by gate", { candidate, cand, cur });
+    }
+  } catch (err) {
+    logger.error("Weekly retraining failed", { candidate, err: err.message });
+    throw err; // so Cloud Scheduler records the run as failed
+  }
+});
+
+// Rollback: point model_metrics/current at one of the kept versions.
+async function pruneOldModels(keep) {
+  const [models] = await bigquery.dataset("safeher").getModels();
+  const versions = models.map((m) => m.id).filter((id) => /^ncrb_risk_model_\d{8}$/.test(id)).sort().reverse();
+  for (const id of versions.slice(KEEP_MODELS)) {
+    if (`${DATASET}.${id}` === keep) continue;
+    await bigquery.query({ query: `DROP MODEL IF EXISTS \`${DATASET}.${id}\`` });
+  }
+}

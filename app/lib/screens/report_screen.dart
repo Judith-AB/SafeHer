@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:safeher/theme.dart';
+import '../constants.dart';
 import '../services/firestore_service.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,14 +20,7 @@ class _ReportScreenState extends State<ReportScreen> {
   String _selectedType = 'Harassment';
   bool _isSubmitting = false;
 
-  final List<String> _incidentTypes = [
-    'Harassment',
-    'Stalking',
-    'Assault',
-    'Theft',
-    'Unsafe Area',
-    'Other',
-  ];
+  final List<String> _incidentTypes = AppConstants.categories;
 
   Future<Position> _getLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -45,86 +38,10 @@ class _ReportScreenState extends State<ReportScreen> {
     return await Geolocator.getCurrentPosition();
   }
 
-  Future<void> updateAnalytics(Position position) async {
-    final firestore = FirebaseFirestore.instance;
-    final snapshot = await firestore.collection('incidents').get();
-
-    int harassment = 0;
-    int stalking = 0;
-    int assault = 0;
-    int theft = 0;
-    int unsafeArea = 0;
-    int other = 0;
-
-    Map<String, int> locationCounts = {};
-    Map<String, int> hourBuckets = {};
-
-    for (var doc in snapshot.docs) {
-      final data = doc.data();
-      final type = data['type'];
-
-      if (type == 'Harassment') harassment++;
-      if (type == 'Stalking') stalking++;
-      if (type == 'Assault') assault++;
-      if (type == 'Theft') theft++;
-      if (type == 'Unsafe Area') unsafeArea++;
-      if (type == 'Other') other++;
-
-      if (data['areaName'] != null) {
-        String area = data['areaName'];
-        locationCounts[area] = (locationCounts[area] ?? 0) + 1;
-      }
-
-      if (data['timestamp'] != null) {
-        Timestamp ts = data['timestamp'];
-        DateTime dt = ts.toDate();
-        int hour = dt.hour;
-        String bucket = "";
-
-        if (hour >= 6 && hour < 12) bucket = "6 AM - 12 PM";
-        else if (hour >= 12 && hour < 18) bucket = "12 PM - 6 PM";
-        else if (hour >= 18 && hour < 24) bucket = "6 PM - 12 AM";
-        else bucket = "12 AM - 6 AM";
-
-        hourBuckets[bucket] = (hourBuckets[bucket] ?? 0) + 1;
-      }
-    }
-
-    String mostUnsafeArea = "Unknown";
-    int maxAreaCount = 0;
-    locationCounts.forEach((key, value) {
-      if (value > maxAreaCount) {
-        maxAreaCount = value;
-        mostUnsafeArea = key;
-      }
-    });
-
-    String peakUnsafeHours = "Unknown";
-    int maxHourCount = 0;
-    hourBuckets.forEach((key, value) {
-      if (value > maxHourCount) {
-        maxHourCount = value;
-        peakUnsafeHours = key;
-      }
-    });
-
-    await firestore.collection('analytics').doc('summary').set({
-      'totalIncidents': snapshot.docs.length,
-      'harassment': harassment,
-      'stalking': stalking,
-      'assault': assault,
-      'theft': theft,
-      'unsafeArea': unsafeArea,
-      'other': other,
-      'mostUnsafeArea': mostUnsafeArea,
-      'peakUnsafeHours': peakUnsafeHours,
-    });
-  }
-
   Future<void> _submitReport() async {
-    if (_descController.text.trim().isEmpty) {
+    if (FirebaseAuth.instance.currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please describe the incident')),
+        const SnackBar(content: Text('Still connecting. Please try again in a moment.')),
       );
       return;
     }
@@ -133,36 +50,30 @@ class _ReportScreenState extends State<ReportScreen> {
 
     try {
       final position = await _getLocation();
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
+      // Round before geocoding so the precise fix never leaves the device.
+      final lat = AppConstants.roundCoord(position.latitude);
+      final lng = AppConstants.roundCoord(position.longitude);
+
+      String? areaName;
+      try {
+        final placemarks = await placemarkFromCoordinates(lat, lng);
+        areaName = placemarks.isNotEmpty ? placemarks.first.locality : null;
+      } catch (_) {
+        areaName = null;
+      }
+
+      await _firestoreService.submitIncident(
+        latitude: lat,
+        longitude: lng,
+        type: _selectedType,
+        description: _descController.text.trim(),
+        areaName: areaName,
       );
-
-      String areaName = placemarks.first.locality ?? "Unknown";
-
-      double fuzzedLat = (position.latitude * 1000).round() / 1000;
-      double fuzzedLng = (position.longitude * 1000).round() / 1000;
-
-      final currentUser = FirebaseAuth.instance.currentUser;
-
-      await FirebaseFirestore.instance.collection('incidents').add({
-        'anonymous_uid': currentUser?.uid,
-        'latitude': fuzzedLat,
-        'longitude': fuzzedLng,
-        'type': _selectedType,
-        'description': _descController.text.trim(),
-        'areaName': areaName,
-        'timestamp': FieldValue.serverTimestamp(),
-        'pii_removed': true,
-        'grid_resolution_m': 111,
-      });
-
-      await updateAnalytics(position);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Report submitted anonymously!'),
+            content: Text('Report submitted without your identity.'),
             backgroundColor: AppTheme.oliveMuted,
           ),
         );
@@ -171,11 +82,11 @@ class _ReportScreenState extends State<ReportScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Could not submit: $e')),
         );
       }
     } finally {
-      setState(() => _isSubmitting = false);
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -203,7 +114,7 @@ class _ReportScreenState extends State<ReportScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Your report is 100% anonymous',
+                'Your name, phone and account are not stored with this report',
                 style: TextStyle(
                   color: AppTheme.deepCharcoal.withOpacity(0.6),
                   fontSize: 14,
@@ -249,7 +160,7 @@ class _ReportScreenState extends State<ReportScreen> {
               ),
               const SizedBox(height: 24),
               const Text(
-                'Describe what happened',
+                'Describe what happened (optional)',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -260,9 +171,10 @@ class _ReportScreenState extends State<ReportScreen> {
               TextField(
                 controller: _descController,
                 maxLines: 5,
+                maxLength: 280,
                 style: const TextStyle(color: AppTheme.deepCharcoal),
                 decoration: InputDecoration(
-                  hintText: 'Describe the incident briefly...',
+                  hintText: 'Please do not include names, phone numbers or addresses.',
                   hintStyle: TextStyle(color: AppTheme.deepCharcoal.withOpacity(0.4)),
                   filled: true,
                   fillColor: AppTheme.white,
@@ -282,7 +194,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'Your location is attached automatically',
+                    'Your location is rounded to about 100 m before upload',
                     style: TextStyle(
                       color: AppTheme.deepCharcoal.withOpacity(0.6),
                       fontSize: 12,

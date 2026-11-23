@@ -1,0 +1,11 @@
+features: pct_lag1, pct_lag2, pct_lag3, rape_share_lag1, kidnapping_and_abduction_share_lag1, dowry_deaths_share_lag1, assault_on_women_with_intent_to_outrage_her_modesty_share_lag1, insult_to_modesty_of_women_share_lag1, cruelty_by_husband_or_his_relatives_share_lag1, importation_of_girls_share_lag1, pct_change_lag1, was_high_lag1
+train rows 5196 (target years 2004-2011), test rows 1942 (2012-2014), HIGH share test 0.100, Kerala test rows 42
+
+| model                              | precision            | recall               | specificity          | f1                   | roc_auc              | pr_auc               |   kerala_roc_auc |
+|:-----------------------------------|:---------------------|:---------------------|:---------------------|:---------------------|:---------------------|:---------------------|-----------------:|
+| Persistence (HIGH last year)       | 0.888 [0.844, 0.931] | 0.856 [0.807, 0.902] | 0.988 [0.983, 0.993] | 0.872 [0.837, 0.906] | 0.922 [0.897, 0.945] | 0.775 [0.718, 0.831] |            0.98  |
+| Last year's rank (top 20% flagged) | 0.877 [0.831, 0.924] | 0.877 [0.832, 0.920] | 0.986 [0.981, 0.992] | 0.877 [0.839, 0.908] | 0.991 [0.987, 0.994] | 0.938 [0.909, 0.960] |            0.998 |
+| Logistic regression                | 0.877 [0.827, 0.922] | 0.877 [0.827, 0.919] | 0.986 [0.981, 0.991] | 0.877 [0.838, 0.909] | 0.992 [0.988, 0.995] | 0.942 [0.917, 0.964] |            1     |
+| Decision tree (depth 4)            | 0.856 [0.808, 0.902] | 0.856 [0.807, 0.907] | 0.984 [0.978, 0.990] | 0.856 [0.821, 0.894] | 0.972 [0.956, 0.988] | 0.893 [0.851, 0.932] |            1     |
+| Random forest                      | 0.872 [0.821, 0.917] | 0.872 [0.824, 0.918] | 0.986 [0.979, 0.991] | 0.872 [0.836, 0.905] | 0.991 [0.986, 0.995] | 0.941 [0.914, 0.962] |            1     |
+| Boosted tree                       | 0.836 [0.785, 0.885] | 0.836 [0.782, 0.887] | 0.982 [0.975, 0.988] | 0.836 [0.795, 0.872] | 0.984 [0.974, 0.992] | 0.885 [0.834, 0.939] |            0.995 |

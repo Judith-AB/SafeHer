@@ -1,53 +1,40 @@
-import 'package:dialog_flowtter/dialog_flowtter.dart';
+import 'dart:math';
+import 'package:cloud_functions/cloud_functions.dart';
 
+class LegalReply {
+  final String text;
+  final String? intent;
+  final double confidence;
+  final bool referral;
+
+  LegalReply(this.text, this.intent, this.confidence, this.referral);
+}
+
+// Calls Dialogflow through a Cloud Function so the app ships no service-account key.
 class DialogflowService {
-  DialogFlowtter? _client;
+  final _functions = FirebaseFunctions.instance;
+  final String sessionId = _randomId();
 
-  bool _ready = false;
-
-  bool get isReady => _ready;
-
-  Future<void> init() async {
-    try {
-      _client = DialogFlowtter(
-        sessionId:
-            "safeher_${DateTime.now().millisecondsSinceEpoch}",
-        jsonPath: 'assets/dialog_flow_auth.json',
-      );
-
-      _ready = true;
-    } catch (e) {
-      _ready = false;
-
-      print("Dialogflow Init Error: $e");
-    }
+  static String _randomId() {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    final r = Random.secure();
+    return List.generate(24, (_) => chars[r.nextInt(chars.length)]).join();
   }
 
-  Future<String> send(String userMessage) async {
-    if (!_ready || _client == null) {
-      return "Assistant initializing...";
-    }
-
-    try {
-      final response = await _client!.detectIntent(
-        queryInput: QueryInput(
-          text: TextInput(
-            text: userMessage,
-            languageCode: "en",
-          ),
-        ),
-      );
-
-      return response.text ??
-          "I didn't understand that.";
-    } catch (e) {
-      print("Dialogflow Error: $e");
-
-      return "Connection error.";
-    }
+  Future<LegalReply> send(String message) async {
+    final result = await _functions
+        .httpsCallable('detectLegalIntent')
+        .call({'text': message, 'sessionId': sessionId});
+    final d = Map<String, dynamic>.from(result.data as Map);
+    return LegalReply(
+      (d['reply'] as String?) ?? '',
+      d['intent'] as String?,
+      (d['confidence'] as num?)?.toDouble() ?? 0,
+      d['referral'] == true,
+    );
   }
 
-  void dispose() {
-    _client?.dispose();
+  Future<void> logUnanswered(String query) async {
+    await _functions.httpsCallable('escalateLegalQuery').call({'userQuery': query});
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../constants.dart';
 
 class HeatmapScreen extends StatefulWidget {
   const HeatmapScreen({super.key});
@@ -16,8 +17,10 @@ class _ZoneInfo {
   final double lng;
   final String riskLabel;
   final double probability;
+  final String district;
 
   _ZoneInfo({
+    required this.district,
     required this.lat,
     required this.lng,
     required this.riskLabel,
@@ -34,8 +37,8 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   double _rocAuc = 0.0;
   _ZoneInfo? _selectedZone;
 
-  static const String _apiUrl =
-      'https://us-central1-safeher-app-9251b.cloudfunctions.net/getPredictiveHeatmap';
+  static const String _apiUrl = AppConstants.heatmapUrl;
+  String? _error;
 
   @override
   void initState() {
@@ -47,6 +50,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
     setState(() {
       _loaded = false;
       _selectedZone = null;
+      _error = null;
     });
 
     try {
@@ -57,7 +61,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
       if (response.statusCode == 200) {
         final Map<String, dynamic> body = jsonDecode(response.body);
         final List data = body['predictions'];
-        final double rocAuc = (body['roc_auc'] as num).toDouble();
+        final double rocAuc = (body['roc_auc'] as num?)?.toDouble() ?? 0.0;
 
         int high = 0;
         int low = 0;
@@ -77,6 +81,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
             low++;
 
           zones.add(_ZoneInfo(
+            district: (item['district'] as String?) ?? '',
             lat: lat,
             lng: lng,
             riskLabel: label,
@@ -85,7 +90,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
 
           loaded.add(CircleMarker(
             point: LatLng(lat, lng),
-            radius: 2000 + (prob * 2000),
+            radius: 12000, // one marker per district, in metres
             useRadiusInMeter: true,
             color: isHigh
                 ? Colors.red.withValues(alpha: 0.4 + (prob * 0.3))
@@ -103,22 +108,28 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
           _rocAuc = rocAuc;
           _loaded = true;
         });
+      } else {
+        setState(() {
+          _error = 'Predictions are unavailable right now (${response.statusCode}).';
+          _loaded = true;
+        });
       }
     } catch (e) {
-      print('Error: $e');
-      setState(() => _loaded = true);
+      setState(() {
+        _error = 'Could not load predictions. Check your connection.';
+        _loaded = true;
+      });
     }
   }
 
   void _onMapTap(LatLng tappedPoint) {
-    // Find nearest zone within 0.05 degrees
     _ZoneInfo? nearest;
     double minDist = double.infinity;
 
     for (var zone in zoneInfoList) {
       final dist = (zone.lat - tappedPoint.latitude).abs() +
           (zone.lng - tappedPoint.longitude).abs();
-      if (dist < minDist && dist < 0.05) {
+      if (dist < minDist && dist < 0.3) {
         minDist = dist;
         nearest = zone;
       }
@@ -127,17 +138,11 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
     setState(() => _selectedZone = nearest);
   }
 
-  String _getDominantType(String riskLabel, double prob) {
-    if (riskLabel == 'HIGH' && prob > 0.8) return 'Assault / Stalking';
-    if (riskLabel == 'HIGH' && prob > 0.6) return 'Stalking / Harassment';
-    return 'Harassment / Unsafe Area';
-  }
-
   String _getSafetyTip(String riskLabel) {
     if (riskLabel == 'HIGH') {
-      return '⚠️ Avoid this area at night. Stay in groups and keep emergency contacts ready.';
+      return 'More crimes against women were recorded here than in most districts. Save local helplines and report incidents.';
     }
-    return '✅ Relatively safer area. Stay alert and report any incidents.';
+    return 'Fewer recorded crimes than most districts. Many incidents go unreported, so stay alert.';
   }
 
   @override
@@ -147,7 +152,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 80,75,56),
         title: const Text(
-          ' ML Safety Heatmap',
+          ' District Risk Map',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -175,7 +180,6 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
             ],
           ),
 
-          // Loading indicator
           if (!_loaded)
             Container(
               color: Colors.black26,
@@ -195,7 +199,6 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
               ),
             ),
 
-          // Stats banner
           if (_loaded)
             Positioned(
               top: 10,
@@ -244,14 +247,25 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                             fontSize: 22,
                             fontWeight: FontWeight.bold),
                       ),
-                      const Text('Model AUC', style: TextStyle(fontSize: 11)),
+                      const Text('Test AUC (NCRB)', style: TextStyle(fontSize: 11)),
                     ]),
                   ],
                 ),
               ),
             ),
 
-          // Tap info popup
+          if (_loaded && _error != null)
+            Positioned(
+              top: 90,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                color: Colors.red.shade50,
+                child: Text(_error!, style: TextStyle(color: Colors.red.shade700)),
+              ),
+            ),
+
           if (_loaded && _selectedZone != null)
             Positioned(
               bottom: 100,
@@ -285,7 +299,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            '${_selectedZone!.riskLabel} RISK ZONE',
+                            '${_selectedZone!.district}: ${_selectedZone!.riskLabel}',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
@@ -303,20 +317,10 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                     ),
                     const SizedBox(height: 10),
                     Row(children: [
-                      const Icon(Icons.warning_amber,
-                          size: 16, color: Colors.grey),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Dominant type: ${_getDominantType(_selectedZone!.riskLabel, _selectedZone!.probability)}',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    ]),
-                    const SizedBox(height: 6),
-                    Row(children: [
                       const Icon(Icons.analytics, size: 16, color: Colors.grey),
                       const SizedBox(width: 6),
                       Text(
-                        'Risk confidence: ${(_selectedZone!.probability * 100).toStringAsFixed(1)}%',
+                        'Predicted HIGH probability: ${(_selectedZone!.probability * 100).toStringAsFixed(1)}%',
                         style: const TextStyle(fontSize: 13),
                       ),
                     ]),
@@ -344,7 +348,6 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
               ),
             ),
 
-          // Legend
           if (_loaded)
             Positioned(
               bottom: 20,
@@ -365,7 +368,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('🤖 ML Predicted Risk',
+                    Text('Next-year district risk (NCRB)',
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 11)),
                     SizedBox(height: 6),

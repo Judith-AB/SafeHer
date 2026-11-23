@@ -3,9 +3,6 @@ import 'package:safeher/theme.dart';
 import '../services/dialogflow_service.dart';
 import '../widgets/chat_bubble.dart';
 import '../widgets/typing_indicator.dart';
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class ChatbotScreen extends StatefulWidget {
   const ChatbotScreen({super.key});
@@ -23,15 +20,16 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   bool _typing = false;
   bool _ready = false;
   String? _error;
-  final String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
 
   static const _chips = [
-    ('🆘 Helplines',       'show helplines'),
-    ('📋 File FIR',        'how to file FIR'),
-    ('🏠 DV Rights',       'domestic violence rights'),
-    ('👔 POSH Act',        'workplace harassment POSH act'),
-    ('👶 POCSO',           'POCSO act child protection'),
-    ('🚫 Protection order','how to get a restraining order'),
+    ('Helplines',       'show helplines'),
+    ('File FIR',        'how to file FIR'),
+    ('DV Rights',       'domestic violence rights'),
+    ('POSH Act',        'workplace harassment POSH act'),
+    ('POCSO',           'POCSO act child protection'),
+    ('Protection order','how to get a restraining order'),
+    ('Stalking',        'someone is stalking me'),
+    ('Online abuse',    'someone shared my photos online'),
   ];
 
   @override
@@ -42,17 +40,19 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
 
   Future<void> _init() async {
     try {
-      await _df.init();
       if (!mounted) return;
       setState(() => _ready = true);
       _addBot(
-        'Hello! I\'m SafeHer\'s legal aid assistant 👩‍⚖️\n\n'
+        'Hello! I\'m SafeHer\'s legal aid assistant \n\n'
         'I can help you with:\n'
         '• Domestic violence rights (DV Act 2005)\n'
         '• How to file an FIR\n'
         '• Workplace harassment (POSH Act)\n'
         '• Child protection (POCSO Act)\n'
+        '• Stalking and harassment (BNS 2023)\n'
+        '• Online abuse (IT Act)\n'
         '• Emergency helplines\n\n'
+        'This is general information, not legal advice. '
         'Tap a topic below or type your question.',
       );
     } catch (e) {
@@ -83,28 +83,19 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       final reply = await _df.send(text);
       if (!mounted) return;
       setState(() => _typing = false);
-      _addBot(reply);
-      debugPrint('===REPLY===: $reply'); 
 
-      final bool isFallback =
-          reply.toLowerCase().contains("i don't know what you mean") ||
-          reply.toLowerCase().contains("i couldn't find") ||
-          reply.toLowerCase().contains("i didn't understand") ||
-          reply.toLowerCase().contains("i'm not sure") ||
-          reply.toLowerCase().contains("could you rephrase") ||
-          reply.toLowerCase().contains("sorry, i don't");
-
-      if (isFallback) {
-        await _escalateQuery(text);
+      if (reply.referral) {
+        await _refer(text);
+      } else {
+        _addBot(reply.text);
       }
-
     } catch (_) {
       if (!mounted) return;
       setState(() => _typing = false);
       _addBot(
         'Sorry, something went wrong. For emergencies:\n\n'
-        '🆘 Police: 100\n'
-        '👩 Mahila Helpline: 181',
+        'Emergency: 112\n'
+        'Women Helpline: 181',
       );
     }
   }
@@ -121,33 +112,25 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     });
   }
 
-  Future<void> _escalateQuery(String userQuery) async {
+  // A referral only: nobody replies to the logged question.
+  Future<void> _refer(String userQuery) async {
+    _addBot(
+      'I\'m not confident I can answer that correctly, so I won\'t guess.\n\n'
+      'For legal help, contact your District Legal Services Authority '
+      '(free legal aid) or the Women Helpline 181.\n'
+      'If you are in danger, call 112.\n\n'
+      'If you need someone to talk to: iCall (TISS counselling), '
+      '9152987821, Mon to Sat, 10 AM to 8 PM.',
+    );
     try {
-      await http.post(
-        Uri.parse('https://escalatelegalquery-b36yjypjaa-uc.a.run.app'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'userQuery': userQuery,
-          'sessionId': _sessionId,
-          'userContact': '+919876543210',
-        }),
-      );
-      _addBot(
-        'I\'ve forwarded your question to a legal aid volunteer. '
-        'They typically respond within 24 hours.\n\n'
-        'For urgent help right now:\n'
-        '📞 iCall: 9152987821\n'
-        '👩 Mahila Helpline: 181\n'
-        '🚔 Police: 100',
-      );
+      await _df.logUnanswered(userQuery);
     } catch (e) {
-      debugPrint('Escalation failed: $e');
+      debugPrint('Could not log unanswered query: $e');
     }
   }
 
   @override
   void dispose() {
-    _df.dispose();
     _input.dispose();
     _scroll.dispose();
     super.dispose();
@@ -279,7 +262,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                         : 'Connecting…',
                     hintStyle: TextStyle(color: AppTheme.deepCharcoal.withOpacity(0.4)),
                     filled: true,
-                    // Subtly themed fill
                     fillColor: AppTheme.creamLight,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(24),

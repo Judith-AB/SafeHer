@@ -1,0 +1,4 @@
+model,precision_high,recall_high,specificity,n,n_high
+ncrb_risk_model_v1,0.875,0.844,0.97,1942,390
+model,precision_high,recall_high,specificity,n,n_high
+ncrb_lr_v1,0.862,0.864,0.965,1942,390
