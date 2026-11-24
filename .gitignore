@@ -136,7 +136,6 @@ pyvenv.cfg
 node_modules/
 __pycache__/
 *.zip
-!dialogflow/agent_camera_ready.zip
 scripts/chatbot_eval_raw.json
 .vscode/
 .idea/
