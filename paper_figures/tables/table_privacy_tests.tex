@@ -1,0 +1,24 @@
+\begin{tabular}{llc}
+\hline
+Layer & Check & Result \\
+\hline
+Firestore rule & signed-in user can create a rounded report & Pass \\
+Firestore rule & unauthenticated create is rejected & Pass \\
+Firestore rule & 6-decimal coordinate is rejected & Pass \\
+Firestore rule & unknown category is rejected & Pass \\
+Firestore rule & user id field is rejected & Pass \\
+Firestore rule & long description is rejected & Pass \\
+Firestore rule & location outside India is rejected & Pass \\
+Firestore rule & client cannot read incidents & Pass \\
+Firestore rule & client cannot read SOS events & Pass \\
+Firestore rule & client cannot read legal queries & Pass \\
+Firestore rule & unrounded SOS location is rejected & Pass \\
+Firestore rule & app can read aggregates & Pass \\
+Firestore rule & heatmap buckets are not public & Pass \\
+Server helper & rounds to 3 decimals ($\sim$111 m) & Pass \\
+Server helper & hour and weekday use IST, not UTC & Pass \\
+Server helper & truncates to the IST hour & Pass \\
+Server helper & hour bands & Pass \\
+Server helper & India bounding box & Pass \\
+\hline
+\end{tabular}
