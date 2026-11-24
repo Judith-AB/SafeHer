@@ -31,4 +31,4 @@ test("client cannot read legal queries", () => assertFails(getDocs(collection(us
 test("unrounded SOS location is rejected", () =>
   assertFails(addDoc(collection(user(), "sos_events"), { latitude: 9.9312345, longitude: 76.2673, timestamp: serverTimestamp() })));
 test("app can read aggregates", () => assertSucceeds(getDocs(collection(guest(), "analytics"))));
-test("heatmap buckets are not public", () => assertFails(getDocs(collection(guest(), "heatmap_buckets"))));
+test("client cannot read heatmap buckets", () => assertFails(getDocs(collection(guest(), "heatmap_buckets"))));

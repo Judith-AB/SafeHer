@@ -44,8 +44,9 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
-    // written only by Cloud Functions; heatmap_buckets stays server-only because a
-    // bucket with one report would expose that report's cell, type and time
+    // written only by Cloud Functions
+    // 111 m cells with small counts could reveal a single report, so buckets are server-only.
+    match /heatmap_buckets/{id} { allow read, write: if false; }
     match /analytics/{id}       { allow read: if true; allow write: if false; }
     match /model_metrics/{id}   { allow read: if true; allow write: if false; }
 

@@ -38,7 +38,31 @@ class _ReportScreenState extends State<ReportScreen> {
     return await Geolocator.getCurrentPosition();
   }
 
+  // Shown before each report so the user knows what is stored and for how long.
+  Future<bool> _confirmNotice() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Before you report'),
+        content: const Text(
+          'We store: the incident type, your location rounded to about 100 m, '
+          'the hour (not the exact time), your area name and any text you add.\n\n'
+          'We do not store your name, phone number or account with the report.\n\n'
+          'Reports are deleted automatically after one year. '
+          'Do not write names or other details that could identify you or anyone else.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('I agree, submit')),
+        ],
+      ),
+    );
+    return ok ?? false;
+  }
+
   Future<void> _submitReport() async {
+    if (!await _confirmNotice()) return;
+    if (!mounted) return;
     if (FirebaseAuth.instance.currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Still connecting. Please try again in a moment.')),

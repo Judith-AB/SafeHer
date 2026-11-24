@@ -368,7 +368,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('Next-year district risk (NCRB)',
+                    Text('Next-year (2015) recorded-crime forecast, NCRB',
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 11)),
                     SizedBox(height: 6),

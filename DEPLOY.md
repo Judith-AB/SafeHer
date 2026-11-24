@@ -51,3 +51,14 @@ Owner: Person 2. Every step takes minutes. Tick each one and paste the output in
 10. **App**: `cd app && flutterfire configure && flutter pub get && flutter analyze && flutter test && flutter run`.
     Then check: submit a report, open the heatmap, ask the bot an in-scope and an out-of-scope question, long-press SOS.
 11. **Rules tests** (needs Java): `cd rules-test && npm install && npm test`.
+
+## Rolling back the risk model
+Option A (console, no setup): Firestore > `model_metrics/current` > set `model` to a kept version
+(for example `safeher-app-9251b.safeher.ncrb_risk_model_v1`) and copy its metrics from `model_history`,
+then delete `heatmap_cache/current`.
+Option B (function): `cd functions && node ../scripts/set_admin.js YOUR_UID` once, then call
+`rollbackRiskModel({ model: "ncrb_risk_model_v1" })` from a signed-in admin client. It re-evaluates the
+model, updates the pointer, clears the cache and logs the rollback in `model_history`.
+
+## Privacy clean-up after deploying these rules
+Firestore console > `analytics/summary` > delete the `by_area` field (old per-locality counts).

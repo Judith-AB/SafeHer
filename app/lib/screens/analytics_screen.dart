@@ -37,7 +37,6 @@ class AnalyticsScreen extends StatelessWidget {
 
           final data = (snapshot.data!.data() as Map<String, dynamic>?) ?? {};
           final byType = Map<String, dynamic>.from(data['by_type'] ?? {});
-          final byArea = Map<String, dynamic>.from(data['by_area'] ?? {});
           final byBand = Map<String, dynamic>.from(data['by_hour_band'] ?? {});
 
           int count(String k) => (byType[k] as num?)?.toInt() ?? 0;
@@ -56,7 +55,6 @@ class AnalyticsScreen extends StatelessWidget {
           };
 
           int total = (data['totalIncidents'] as num?)?.toInt() ?? 0;
-          String area = topKey(byArea);
           String peakHours = bandLabels[topKey(byBand)] ?? 'Unknown';
 
           return SingleChildScrollView(
@@ -71,13 +69,6 @@ class AnalyticsScreen extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 16),
-
-                _buildCard(
-                  title: "Most reports from",
-                  value: area,
-                  color: AppTheme.oliveMuted,
-                  icon: Icons.location_on,
-                ),
 
                 const SizedBox(height: 20),
 

@@ -24,8 +24,12 @@ const DIALOGFLOW_PROJECT = process.env.DIALOGFLOW_PROJECT || PROJECT;
 // Must match app/lib/constants.dart and firestore.rules.
 const CATEGORIES = ["Assault", "Stalking", "Eve Teasing", "Harassment", "Unsafe Area"];
 const RETENTION_DAYS = { incident: 365, sos: 30, legal: 90 };
-const FALLBACK_CONFIDENCE = 0.5;
+const FALLBACK_CONFIDENCE = 0.5; // chosen from scripts/chatbot_eval.js results
+// recall_high is recall on the HIGH class. BigQuery ML's own "recall" is for LOW,
+// because it treats the first label alphabetically as positive for string labels.
 const GATE = { aucTolerance: 0.01, recallTolerance: 0.02 };
+// Absolute floor, so small tolerated drops cannot add up over many promotions (v1: 0.9817 / 0.8436).
+const GATE_FLOOR = { roc_auc: 0.97, recall_high: 0.80 };
 const KEEP_MODELS = 4;
 
 const daysFromNow = (n) => admin.firestore.Timestamp.fromMillis(Date.now() + n * 86400000);
@@ -82,7 +86,7 @@ exports.onIncidentCreated = onDocumentCreated("incidents/{incidentId}", async (e
     by_type: { [data.type]: FieldValue.increment(1) },
     by_hour_band: { [hourBand(hour)]: FieldValue.increment(1) },
   };
-  if (area) summary.by_area = { [area]: FieldValue.increment(1) };
+  // Per-locality counts are not published: a locality with one report would reveal it.
   await db.collection("analytics").doc("summary").set(summary, { merge: true });
 
   // Live reports have no ground-truth label, so they are stored but not used for training.
@@ -203,12 +207,44 @@ function trainSql(model) {
     FROM \`${PANEL_TABLE}\` WHERE split = 'TRAIN'`;
 }
 
+const TEST_SQL = `SELECT * EXCEPT (${NON_FEATURES}) FROM \`${PANEL_TABLE}\` WHERE split = 'TEST'`;
+
 function evalSql(model) {
   return `
-    SELECT ROUND(precision, 4) AS precision, ROUND(recall, 4) AS recall, ROUND(accuracy, 4) AS accuracy,
-           ROUND(f1_score, 4) AS f1_score, ROUND(roc_auc, 4) AS roc_auc
-    FROM ML.EVALUATE(MODEL \`${model}\`, (
-      SELECT * EXCEPT (${NON_FEATURES}) FROM \`${PANEL_TABLE}\` WHERE split = 'TEST'))`;
+    SELECT ROUND(accuracy, 4) AS accuracy, ROUND(roc_auc, 4) AS roc_auc,
+           ROUND(recall, 4) AS recall_low, ROUND(precision, 4) AS precision_low
+    FROM ML.EVALUATE(MODEL \`${model}\`, (${TEST_SQL}))`;
+}
+
+function confusionSql(model) {
+  return `SELECT expected_label, HIGH, LOW FROM ML.CONFUSION_MATRIX(MODEL \`${model}\`, (${TEST_SQL}))`;
+}
+
+// Metrics on the held-out years, with precision, recall and F1 for the HIGH class.
+async function evaluate(model) {
+  const [[m]] = await bigquery.query({ query: evalSql(model) });
+  const [cm] = await bigquery.query({ query: confusionSql(model) });
+  const row = (label) => cm.find((r) => r.expected_label === label) || { HIGH: 0, LOW: 0 };
+  const tp = row("HIGH").HIGH, fn = row("HIGH").LOW, fp = row("LOW").HIGH;
+  const r4 = (x) => Math.round(x * 10000) / 10000;
+  const recall_high = tp + fn ? r4(tp / (tp + fn)) : 0;
+  const precision_high = tp + fp ? r4(tp / (tp + fp)) : 0;
+  const f1_high = recall_high + precision_high ? r4((2 * recall_high * precision_high) / (recall_high + precision_high)) : 0;
+  return { ...m, recall_high, precision_high, f1_high };
+}
+
+function passesGate(cand, cur) {
+  if (cand.roc_auc < GATE_FLOOR.roc_auc || cand.recall_high < GATE_FLOOR.recall_high) return false;
+  if (!cur) return true;
+  return cand.roc_auc >= cur.roc_auc - GATE.aucTolerance &&
+         cand.recall_high >= cur.recall_high - GATE.recallTolerance;
+}
+
+async function promoteModel(model, metrics, extra = {}) {
+  const record = { model, ...metrics, promoted_at: FieldValue.serverTimestamp(), ...extra };
+  await db.collection("model_metrics").doc("current").set(record);
+  await db.collection("model_metrics").doc("risk_model").set(record); // read by older app builds
+  await db.collection("heatmap_cache").doc("current").delete();
 }
 
 exports.scheduledRetrainRiskModel = onSchedule({
@@ -223,26 +259,21 @@ exports.scheduledRetrainRiskModel = onSchedule({
 
   try {
     await bigquery.query({ query: trainSql(candidate) });
-    const [[cand]] = await bigquery.query({ query: evalSql(candidate) });
+    const cand = await evaluate(candidate);
     let cur = null;
-    if (current.roc_auc != null) cur = current;
-    else if (current.model) [[cur]] = await bigquery.query({ query: evalSql(current.model) }).catch(() => [[null]]);
+    if (current.recall_high != null) cur = current;
+    else if (current.model) cur = await evaluate(current.model).catch(() => null);
 
-    const promote = !cur || (
-      cand.roc_auc >= cur.roc_auc - GATE.aucTolerance &&
-      cand.recall >= cur.recall - GATE.recallTolerance);
+    const promote = passesGate(cand, cur);
 
     await db.collection("model_history").add({
-      candidate, previous: current.model, candidate_metrics: cand,
-      previous_metrics: cur, promoted: promote, gate: GATE,
+      action: "retrain", candidate, previous: current.model, candidate_metrics: cand,
+      previous_metrics: cur, promoted: promote, gate: GATE, gate_floor: GATE_FLOOR,
       at: FieldValue.serverTimestamp(),
     });
 
     if (promote) {
-      const record = { model: candidate, ...cand, promoted_at: FieldValue.serverTimestamp() };
-      await db.collection("model_metrics").doc("current").set(record);
-      await db.collection("model_metrics").doc("risk_model").set(record); // read by older app builds
-      await db.collection("heatmap_cache").doc("current").delete();
+      await promoteModel(candidate, cand);
       logger.info("Promoted candidate", { candidate, cand });
       await pruneOldModels(candidate);
     } else {
@@ -250,9 +281,32 @@ exports.scheduledRetrainRiskModel = onSchedule({
       logger.warn("Candidate rejected by gate", { candidate, cand, cur });
     }
   } catch (err) {
-    logger.error("Weekly retraining failed", { candidate, err: err.message });
+    logger.error("Monthly retraining failed", { candidate, err: err.message });
     throw err; // so Cloud Scheduler records the run as failed
   }
+});
+
+// Rollback to a kept version. Only callable by an account with the custom claim admin=true
+// (set with scripts/set_admin.js). The Firestore console edit in DEPLOY.md does the same by hand.
+exports.rollbackRiskModel = onCall({ maxInstances: 1, timeoutSeconds: 120 }, async (request) => {
+  if (!request.auth?.token?.admin) throw new HttpsError("permission-denied", "Admin only.");
+  const id = String(request.data?.model || "");
+  if (!/^ncrb_risk_model_(v1|\d{8})$/.test(id)) throw new HttpsError("invalid-argument", "Unknown model id.");
+  const model = `${DATASET}.${id}`;
+  const previous = (await currentModel()).model;
+  let metrics;
+  try {
+    metrics = await evaluate(model);
+  } catch (err) {
+    throw new HttpsError("not-found", `Model ${id} could not be evaluated: ${err.message}`);
+  }
+  await promoteModel(model, metrics, { rolled_back_from: previous });
+  await db.collection("model_history").add({
+    action: "rollback", candidate: model, previous, candidate_metrics: metrics, promoted: true,
+    at: FieldValue.serverTimestamp(),
+  });
+  logger.warn("Rolled back risk model", { from: previous, to: model });
+  return { model, metrics };
 });
 
 // Rollback: point model_metrics/current at one of the kept versions.
