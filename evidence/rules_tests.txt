@@ -1,0 +1,51 @@
+
+> test
+> cd .. && npx --prefix rules-test firebase emulators:exec --only firestore --project demo-safeher "node --test rules-test/rules.test.js"
+
+[36m[1mi  emulators:[22m[39m Starting emulators: firestore
+[36m[1mi  emulators:[22m[39m Detected demo project ID "demo-safeher", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail.
+[36m[1mi  firestore:[22m[39m Firestore Emulator logging to [1mfirestore-debug.log[22m
+[32m[1m+  firestore:[22m[39m Firestore Emulator was started in standard edition.
+[32m[1m+  firestore:[22m[39m Firestore Emulator UI websocket is running on 9150.
+[36m[1mi [22m[39m Running script: [1mnode --test rules-test/rules.test.js[22m
+✔ signed-in user can create a rounded report (2009.8906ms)
+[2026-11-24T12:19:53.002Z]  @firebase/firestore: Firestore (13.4.0): GrpcConnection RPC 'Write' stream 0x8380fead error. Code: 7 Message: 7 PERMISSION_DENIED: 
+false for 'create' @ L21, false for 'create' @ L53
+✔ unauthenticated create is rejected (53.8394ms)
+[2026-11-24T12:19:53.048Z]  @firebase/firestore: Firestore (13.4.0): GrpcConnection RPC 'Write' stream 0x8380feae error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L21:24 for 'create' @ L21, false for 'create' @ L53, false for 'create' @ L21, false for 'create' @ L53
+✔ 6-decimal coordinate is rejected (45.3466ms)
+[2026-11-24T12:19:53.088Z]  @firebase/firestore: Firestore (13.4.0): GrpcConnection RPC 'Write' stream 0x8380feaf error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L21:24 for 'create' @ L21, false for 'create' @ L53, false for 'create' @ L21, false for 'create' @ L53
+✔ unknown category is rejected (39.2997ms)
+[2026-11-24T12:19:53.121Z]  @firebase/firestore: Firestore (13.4.0): GrpcConnection RPC 'Write' stream 0x8380feb0 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L21:24 for 'create' @ L21, false for 'create' @ L53, false for 'create' @ L21, false for 'create' @ L53
+✔ user id field is rejected (33.4491ms)
+[2026-11-24T12:19:53.154Z]  @firebase/firestore: Firestore (13.4.0): GrpcConnection RPC 'Write' stream 0x8380feb1 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L21:24 for 'create' @ L21, false for 'create' @ L53, false for 'create' @ L21, false for 'create' @ L53
+✔ long description is rejected (32.794ms)
+[2026-11-24T12:19:53.199Z]  @firebase/firestore: Firestore (13.4.0): GrpcConnection RPC 'Write' stream 0x8380feb2 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L21:24 for 'create' @ L21, false for 'create' @ L53, false for 'create' @ L21, false for 'create' @ L53
+✔ location outside India is rejected (44.3943ms)
+✔ client cannot read incidents (67.3033ms)
+✔ client cannot read SOS events (39.5494ms)
+✔ client cannot read legal queries (23.8723ms)
+[2026-11-24T12:19:53.360Z]  @firebase/firestore: Firestore (13.4.0): GrpcConnection RPC 'Write' stream 0x8380feb6 error. Code: 7 Message: 7 PERMISSION_DENIED: 
+evaluation error at L39:24 for 'create' @ L39, false for 'create' @ L53, false for 'create' @ L39, false for 'create' @ L53
+✔ unrounded SOS location is rejected (30.353ms)
+✔ app can read aggregates (65.1327ms)
+✔ heatmap buckets are not public (31.0307ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2873.2743
+[32m[1m+ [22m[39m Script exited successfully (code 0)
+[36m[1mi  emulators:[22m[39m Shutting down emulators.
+[36m[1mi  firestore:[22m[39m Stopping Firestore Emulator
+[33m[1m! [22m[39m Firestore Emulator has exited upon receiving signal: SIGINT
+[36m[1mi  hub:[22m[39m Stopping emulator hub
+[36m[1mi  logging:[22m[39m Stopping Logging Emulator

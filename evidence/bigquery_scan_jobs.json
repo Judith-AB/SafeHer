@@ -1,0 +1,20 @@
+[
+  {
+    "cache_hit": "false", 
+    "creation_time": "2026-11-22 18:27:39", 
+    "job_id": "bqjob_r22db786c25bf0701_000001a204838b0f_1", 
+    "mb_billed": "36866.0", 
+    "mb_processed": "36860.85", 
+    "query": "CREATE OR REPLACE MODEL safeher.ncrb_risk_model_v1 OPTIONS (model_type='boosted_tree_classifier', num_parallel_tree=1, max_tree_depth=4, input_label_cols=['risk_label'], data_split_method='NO_SPLIT') AS SELECT * EXCEPT (state, district, year, split, is_kerala, total_lag1) FROM safeher.ncrb_panel WHERE split='TRAIN'", 
+    "statement_type": "CREATE_MODEL"
+  }, 
+  {
+    "cache_hit": "false", 
+    "creation_time": "2026-11-23 09:18:20", 
+    "job_id": "job_d4zcSuepXtw00WMY_ByTYPvYVANP", 
+    "mb_billed": "20.0", 
+    "mb_processed": "0.04", 
+    "query": "\n        SELECT district, lat AS lat_zone, lng AS lng_zone, year AS forecast_year,\n               predicted_risk_label,\n               ROUND((SELECT p.prob FROM UNNEST(predicted_risk_label_probs) p WHERE p.label = 'HIGH'), 3)\n                 AS high_risk_probability\n        FROM ML.PREDICT(MODEL `safeher-app-9251b.safeher.ncrb_risk_model_v1`, (SELECT * FROM `safeher-app-9251b.safeher.kerala_forecast`))\n        ORDER BY district", 
+    "statement_type": "SELECT"
+  }
+]

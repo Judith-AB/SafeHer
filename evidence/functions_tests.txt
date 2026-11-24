@@ -1,0 +1,17 @@
+
+> test
+> node --test test/*.test.js
+
+✔ rounds to 3 decimals (~111 m) (0.8495ms)
+✔ hour and weekday use IST, not UTC (0.7796ms)
+✔ truncates to the IST hour (0.848ms)
+✔ hour bands (0.1518ms)
+✔ India bounding box (0.2428ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 88.0445

@@ -1,0 +1,15 @@
+=== INCIDENTS ===
+---
+name: projects/safeher-app-9251b/databases/(default)/collectionGroups/incidents/fields/expireAt
+ttlConfig:
+  state: ACTIVE
+=== SOS EVENTS ===
+---
+name: projects/safeher-app-9251b/databases/(default)/collectionGroups/sos_events/fields/expireAt
+ttlConfig:
+  state: ACTIVE
+=== LEGAL QUERIES ===
+---
+name: projects/safeher-app-9251b/databases/(default)/collectionGroups/unresolved_legal_queries/fields/expireAt
+ttlConfig:
+  state: ACTIVE

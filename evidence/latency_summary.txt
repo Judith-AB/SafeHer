@@ -1,0 +1,10 @@
+Cold first request: 2628 ms, HTTP 200
+Cache invalidated before request.
+Cache regenerated successfully.
+Model: safeher-app-9251b.safeher.ncrb_risk_model_v1
+
+Warm-cache benchmark:
+Concurrency 1: 100 requests, 0 errors, p50 840 ms, p95 903 ms, p99 1163 ms
+Concurrency 10: 100 requests, 0 errors, p50 878 ms, p95 1337 ms, p99 1376 ms
+Concurrency 50: 100 requests, 0 errors, p50 1258 ms, p95 1961 ms, p99 1982 ms
+Concurrency 100: 100 requests, 0 errors, p50 1360 ms, p95 2419 ms, p99 2699 ms
