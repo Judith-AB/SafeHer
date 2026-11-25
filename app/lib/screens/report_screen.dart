@@ -221,7 +221,7 @@ class _ReportScreenState extends State<ReportScreen> {
                     'Your location is rounded to about 110 m before upload',
                     style: TextStyle(
                       color: AppTheme.deepCharcoal.withOpacity(0.6),
-                      fontSize: 12,cd
+                      fontSize: 12,
                     ),
                   ),
                 ],
