@@ -1,12 +1,13 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onRequest, onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { setGlobalOptions } = require("firebase-functions/v2");
 const { logger } = require("firebase-functions");
 const { BigQuery } = require("@google-cloud/bigquery");
 const { SessionsClient } = require("@google-cloud/dialogflow");
 const admin = require("firebase-admin");
 const { roundCoord, istParts, truncateToIstHour, hourBand, inIndia } = require("./lib/helpers");
-
+setGlobalOptions({ region: "asia-south1" });
 admin.initializeApp();
 const db = admin.firestore();
 const bigquery = new BigQuery();

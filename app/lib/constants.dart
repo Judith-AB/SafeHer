@@ -9,7 +9,7 @@ class AppConstants {
   ];
 
   static const heatmapUrl =
-      'https://us-central1-safeher-app-9251b.cloudfunctions.net/getPredictiveHeatmap';
+      'https://asia-south1-safeher-app-9251b.cloudfunctions.net/getPredictiveHeatmap';
 
   // ~111 m cell; applied before any location leaves the device
   static double roundCoord(double x) => (x * 1000).round() / 1000;

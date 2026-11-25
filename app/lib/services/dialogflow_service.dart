@@ -12,7 +12,8 @@ class LegalReply {
 
 // Calls Dialogflow through a Cloud Function so the app ships no service-account key.
 class DialogflowService {
-  final _functions = FirebaseFunctions.instance;
+  final _functions =
+    FirebaseFunctions.instanceFor(region: 'asia-south1');
   final String sessionId = _randomId();
 
   static String _randomId() {
