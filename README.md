@@ -44,6 +44,5 @@ See `ml/README.md` for the experiments and `DEPLOY.md` for setup.
 ## Limitations
 
 The model predicts recorded (not actual) crime: NCRB counts reflect reporting rates and
-district population, and the district-year data stops at 2014. App reports are stored but not
-yet used for training. The legal bot gives general
+district population, and the district-year data stops at 2014. The legal bot gives general
 information, not legal advice, and no human replies to referred questions.

@@ -34,6 +34,8 @@ const KEEP_MODELS = 4;
 
 const daysFromNow = (n) => admin.firestore.Timestamp.fromMillis(Date.now() + n * 86400000);
 
+const WEAK_TEST = process.env.RETRAIN_WEAK_TEST === "true";
+
 function requireAuth(request) {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign-in required.");
 }
@@ -199,11 +201,14 @@ exports.getPredictiveHeatmap = onRequest({ maxInstances: 5, timeoutSeconds: 60 }
 });
 
 function trainSql(model) {
+  const select = WEAK_TEST
+    ? "SELECT pct_change_lag1, risk_label"
+    : `SELECT * EXCEPT (${NON_FEATURES})`;
   return `
     CREATE OR REPLACE MODEL \`${model}\`
     OPTIONS (model_type = 'boosted_tree_classifier', num_parallel_tree = 1, max_tree_depth = 4,
              input_label_cols = ['risk_label'], data_split_method = 'NO_SPLIT') AS
-    SELECT * EXCEPT (${NON_FEATURES})
+    ${select}
     FROM \`${PANEL_TABLE}\` WHERE split = 'TRAIN'`;
 }
 
@@ -253,7 +258,7 @@ exports.scheduledRetrainRiskModel = onSchedule({
   timeoutSeconds: 540,
   memory: "1GiB",
 }, async () => {
-  const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "");
   const candidate = `${DATASET}.ncrb_risk_model_${stamp}`;
   const current = await currentModel();
 
@@ -269,6 +274,7 @@ exports.scheduledRetrainRiskModel = onSchedule({
     await db.collection("model_history").add({
       action: "retrain", candidate, previous: current.model, candidate_metrics: cand,
       previous_metrics: cur, promoted: promote, gate: GATE, gate_floor: GATE_FLOOR,
+      weak_test: WEAK_TEST,
       at: FieldValue.serverTimestamp(),
     });
 
@@ -291,7 +297,7 @@ exports.scheduledRetrainRiskModel = onSchedule({
 exports.rollbackRiskModel = onCall({ maxInstances: 1, timeoutSeconds: 120 }, async (request) => {
   if (!request.auth?.token?.admin) throw new HttpsError("permission-denied", "Admin only.");
   const id = String(request.data?.model || "");
-  if (!/^ncrb_risk_model_(v1|\d{8})$/.test(id)) throw new HttpsError("invalid-argument", "Unknown model id.");
+  if (!/^ncrb_risk_model_(v1|\d{8,12})$/.test(id)) throw new HttpsError("invalid-argument", "Unknown model id.");
   const model = `${DATASET}.${id}`;
   const previous = (await currentModel()).model;
   let metrics;
@@ -312,7 +318,7 @@ exports.rollbackRiskModel = onCall({ maxInstances: 1, timeoutSeconds: 120 }, asy
 // Rollback: point model_metrics/current at one of the kept versions.
 async function pruneOldModels(keep) {
   const [models] = await bigquery.dataset("safeher").getModels();
-  const versions = models.map((m) => m.id).filter((id) => /^ncrb_risk_model_\d{8}$/.test(id)).sort().reverse();
+  const versions = models.map((m) => m.id).filter((id) => /^ncrb_risk_model_\d{8,12}$/.test(id)).sort().reverse();
   for (const id of versions.slice(KEEP_MODELS)) {
     if (`${DATASET}.${id}` === keep) continue;
     await bigquery.query({ query: `DROP MODEL IF EXISTS \`${DATASET}.${id}\`` });

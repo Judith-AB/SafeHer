@@ -1,0 +1,5 @@
+at,candidate,previous,cand_roc_auc,cand_recall,prev_roc_auc,prev_recall,promoted
+2026-11-24,safeher-app-9251b.safeher.ncrb_risk_model_20261124,safeher-app-9251b.safeher.ncrb_risk_model_v1,0.9817,0.8436,0.9817,0.8436,true
+2026-11-25,safeher-app-9251b.safeher.ncrb_risk_model_202611250619,safeher-app-9251b.safeher.ncrb_risk_model_20261124,0.9817,0.8436,0.9817,0.8436,true
+2026-11-25,safeher-app-9251b.safeher.ncrb_risk_model_202611250622,safeher-app-9251b.safeher.ncrb_risk_model_20261124,0.6209,0,0.9817,0.8436,false
+2026-11-25,safeher-app-9251b.safeher.ncrb_risk_model_202611250628,safeher-app-9251b.safeher.ncrb_risk_model_202611250619,0.6209,0,0.9817,0.8436,false

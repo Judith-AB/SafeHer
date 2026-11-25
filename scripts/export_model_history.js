@@ -15,6 +15,6 @@ admin.initializeApp({ projectId: process.env.GCLOUD_PROJECT || "safeher-app-9251
     const c = x.candidate_metrics || {};
     const p = x.previous_metrics || {};
     console.log([x.at ? x.at.toDate().toISOString().slice(0, 10) : "", x.candidate, x.previous || "",
-      c.roc_auc ?? "", c.recall ?? "", p.roc_auc ?? "", p.recall ?? "", x.promoted].join(","));
+      c.roc_auc ?? "", c.recall_high ?? "", p.roc_auc ?? "", p.recall_high ?? "", x.promoted].join(","));
   }
 })().catch((e) => { console.error(e.message); process.exit(1); });

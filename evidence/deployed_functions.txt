@@ -1,59 +1,8 @@
-NAME: detectLegalIntent
-STATE: ACTIVE
-TRIGGER: HTTP Trigger
-REGION: us-central1
-ENVIRONMENT: 2nd gen
-
-NAME: escalateLegalQuery
-STATE: ACTIVE
-TRIGGER: HTTP Trigger
-REGION: us-central1
-ENVIRONMENT: 2nd gen
-
-NAME: ext-firestore-bigquery-export-fsexportbigquery
-STATE: ACTIVE
-TRIGGER: topic: eventarc-asia-south1-ext-firestore-bigquery-export-fsexportbigquery-978510-431
-REGION: asia-south1
-ENVIRONMENT: 2nd gen
-
-NAME: ext-firestore-bigquery-export-initBigQuerySync
-STATE: ACTIVE
-TRIGGER: HTTP Trigger
-REGION: asia-south1
-ENVIRONMENT: 1st gen
-
-NAME: ext-firestore-bigquery-export-setupBigQuerySync
-STATE: ACTIVE
-TRIGGER: HTTP Trigger
-REGION: asia-south1
-ENVIRONMENT: 1st gen
-
-NAME: ext-firestore-bigquery-export-syncBigQuery
-STATE: ACTIVE
-TRIGGER: HTTP Trigger
-REGION: asia-south1
-ENVIRONMENT: 1st gen
-
-NAME: getPredictiveHeatmap
-STATE: ACTIVE
-TRIGGER: HTTP Trigger
-REGION: us-central1
-ENVIRONMENT: 2nd gen
-
-NAME: onIncidentCreated
-STATE: ACTIVE
-TRIGGER: topic: eventarc-asia-south1-onincidentcreated-840665-824
-REGION: us-central1
-ENVIRONMENT: 2nd gen
-
-NAME: onSosTriggered
-STATE: ACTIVE
-TRIGGER: topic: eventarc-asia-south1-onsostriggered-487718-166
-REGION: us-central1
-ENVIRONMENT: 2nd gen
-
-NAME: scheduledRetrainRiskModel
-STATE: ACTIVE
-TRIGGER: HTTP Trigger
-REGION: us-central1
-ENVIRONMENT: 2nd gen
+NAME                       STATE   TRIGGER                                                   REGION       ENVIRONMENT
+detectLegalIntent          ACTIVE  HTTP Trigger                                              us-central1  2nd gen
+escalateLegalQuery         ACTIVE  HTTP Trigger                                              us-central1  2nd gen
+getPredictiveHeatmap       ACTIVE  HTTP Trigger                                              us-central1  2nd gen
+onIncidentCreated          ACTIVE  topic: eventarc-asia-south1-onincidentcreated-840665-824  us-central1  2nd gen
+onSosTriggered             ACTIVE  topic: eventarc-asia-south1-onsostriggered-487718-166     us-central1  2nd gen
+rollbackRiskModel          ACTIVE  HTTP Trigger                                              us-central1  2nd gen
+scheduledRetrainRiskModel  ACTIVE  HTTP Trigger                                              us-central1  2nd gen
