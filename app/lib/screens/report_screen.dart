@@ -45,7 +45,7 @@ class _ReportScreenState extends State<ReportScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Before you report'),
         content: const Text(
-          'We store: the incident type, your location rounded to about 100 m, '
+          'We store: the incident type, your location rounded to about 110 m, '
           'the hour (not the exact time), your area name and any text you add.\n\n'
           'We do not store your name, phone number or account with the report.\n\n'
           'Reports are deleted automatically after one year. '
@@ -218,10 +218,10 @@ class _ReportScreenState extends State<ReportScreen> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'Your location is rounded to about 100 m before upload',
+                    'Your location is rounded to about 110 m before upload',
                     style: TextStyle(
                       color: AppTheme.deepCharcoal.withOpacity(0.6),
-                      fontSize: 12,
+                      fontSize: 12,cd
                     ),
                   ),
                 ],

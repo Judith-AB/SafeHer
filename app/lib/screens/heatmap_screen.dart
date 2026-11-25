@@ -320,7 +320,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                       const Icon(Icons.analytics, size: 16, color: Colors.grey),
                       const SizedBox(width: 6),
                       Text(
-                        'Predicted HIGH probability: ${(_selectedZone!.probability * 100).toStringAsFixed(1)}%',
+                        'Model score: ${_selectedZone!.probability.toStringAsFixed(3)}',
                         style: const TextStyle(fontSize: 13),
                       ),
                     ]),
