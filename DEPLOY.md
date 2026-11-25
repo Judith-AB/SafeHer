@@ -9,8 +9,10 @@ If anyone still has Owner on the old project, add the new email there instead
 2. `bash scripts/switch_project.sh NEW_PROJECT_ID`  (rewrites every hardcoded ID in the repo)
 3. `bash scripts/setup_new_project.sh NEW_PROJECT_ID`  (APIs, Firestore in asia-south1, BigQuery dataset, IAM)
 4. Firebase console: Blaze plan with a budget alert, and enable Anonymous sign-in.
-5. `cd functions && npm install && cd .. && node dialogflow/create_agent.js NEW_PROJECT_ID`
-   rebuilds the 7-intent agent from `dialogflow/intents.json`. Person 3 checks every answer there first.
+5. Create a Dialogflow ES agent in `NEW_PROJECT_ID` (dialogflow.cloud.google.com > Create agent, language English),
+   then restore it from `dialogflow/SafeHer-LegalAid.zip`: agent settings (gear icon) > Export and Import >
+   Restore from ZIP > type RESTORE. This loads the 8 topic intents plus the fallback. Person 3 checks every
+   answer in the console first.
 6. `cd app && flutterfire configure --project=NEW_PROJECT_ID`
 7. Continue with step 1 below. Steps 4 and 9 (old documents, old key) no longer apply.
 
